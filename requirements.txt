@@ -1,0 +1,6 @@
+streamlit
+python-docx
+fountain
+openai
+elevenlabs
+python-dotenv
