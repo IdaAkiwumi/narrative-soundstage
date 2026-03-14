@@ -13,6 +13,7 @@ def init_state():
     if "script_text" not in st.session_state: st.session_state.script_text = ""
     if "undo_stack" not in st.session_state: st.session_state.undo_stack = []
     if "redo_stack" not in st.session_state: st.session_state.redo_stack = []
+    if "edit_history" not in st.session_state: st.session_state.edit_history = []
     if "voice_map" not in st.session_state: 
         st.session_state.voice_map = {"NARRATOR": "en-GB-RyanNeural"}
     if "playing" not in st.session_state: st.session_state.playing = False
@@ -34,7 +35,6 @@ async def generate_voice_bytes(text, voice_id, rate="+0%"):
         return None
 
 def normalize_script_spacing(text):
-    # Replaces 3 or more newlines with exactly 2 (one empty line between text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
@@ -64,23 +64,27 @@ st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
 st.markdown("""
     <style>
+    /* Remove streamlit padding */
+    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
+    .element-container { margin-bottom: 0.2rem !important; }
+    
     .compact-header {
         font-family: 'Courier New', Courier, monospace;
         background-color: #262730; padding: 5px 15px; border-radius: 4px;
-        color: #ffd600; font-size: 14px; margin-bottom: 10px;
+        color: #ffd600; font-size: 14px; margin-bottom: 5px;
         display: flex; justify-content: space-between; align-items: center;
     }
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
         background-color: #ffffff !important; color: #000000 !important;
-        font-size: 18px !important; line-height: 1.6 !important; padding: 40px !important;
+        font-size: 18px !important; line-height: 1.6 !important; padding: 30px !important;
     }
     .performance-monitor {
-        background-color: #1e1e1e; color: #ffffff; padding: 15px;
+        background-color: #1e1e1e; color: #ffffff; padding: 12px;
         border-radius: 8px; border-left: 8px solid #ffd600;
-        font-family: 'Courier New', Courier, monospace; margin-bottom: 15px;
+        font-family: 'Courier New', Courier, monospace; margin-bottom: 5px;
     }
-    .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; }
+    .active-line { color: #ffd600; font-weight: bold; font-size: 22px; display: block; }
     .stats-badge { background-color: #ffd600; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
@@ -128,18 +132,26 @@ with st.sidebar:
 
     h_col1, h_col2 = st.columns(2)
     with h_col1:
-        if st.button("↩️ UNDO", use_container_width=True, disabled=not st.session_state.undo_stack):
+        if st.button("↩️ UNDO", use_container_width=True, disabled=len(st.session_state.undo_stack) < 1):
             st.session_state.redo_stack.append(st.session_state.script_text)
             st.session_state.script_text = st.session_state.undo_stack.pop()
             st.rerun()
     with h_col2:
-        if st.button("↪️ REDO", use_container_width=True, disabled=not st.session_state.redo_stack):
+        if st.button("↪️ REDO", use_container_width=True, disabled=len(st.session_state.redo_stack) < 1):
             st.session_state.undo_stack.append(st.session_state.script_text)
             st.session_state.script_text = st.session_state.redo_stack.pop()
             st.rerun()
 
     st.divider()
-    jump_line = st.number_input("Jump to Line #", min_value=1, value=st.session_state.current_line_idx + 1)
+    st.subheader("📍 Jump History")
+    if st.session_state.edit_history:
+        for item in reversed(st.session_state.edit_history[-5:]):
+            if st.button(f"L{item['block']}: {item['text'][:15]}...", key=f"hist_{item['time']}", use_container_width=True):
+                st.session_state.current_line_idx = item['idx']
+                st.rerun()
+
+    st.divider()
+    jump_line = st.number_input("Jump to Block #", min_value=1, value=st.session_state.current_line_idx + 1)
     if st.button("🚀 Jump"):
         st.session_state.current_line_idx = int(jump_line) - 1
         st.rerun()
@@ -157,6 +169,7 @@ if uploaded_file:
     raw_text = "\n".join([p.text for p in doc.paragraphs])
     normalized_text = normalize_script_spacing(raw_text)
     if normalized_text != st.session_state.script_text:
+        st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = normalized_text
         st.session_state.current_line_idx = 0
         st.rerun()
@@ -180,7 +193,6 @@ if st.session_state.script_text:
                 chosen_v = st.selectbox(f"Role: {name}", list(FREE_VOICES.keys()), index=list(FREE_VOICES.keys()).index(v_label), key=f"v_sel_{name}")
                 st.session_state.voice_map[name] = FREE_VOICES[chosen_v]
 
-    # Parsing Script (Strict Tracking of Raw Line Index)
     raw_split = st.session_state.script_text.split('\n')
     lines = []
     for i, line in enumerate(raw_split):
@@ -200,15 +212,14 @@ if st.session_state.script_text:
         
         st.markdown(f"""
             <div class="performance-monitor">
-                <div style="display: flex; justify-content: space-between;">
-                    <small style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</small>
-                    <small style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</small>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
+                    <span style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</span>
+                    <span style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</span>
                 </div>
                 <span class="active-line">{current_line_text}</span>
             </div>
         """, unsafe_allow_html=True)
         
-        # JS Function for Pixel-Perfect Scrolling
         scroll_js = f"""
             <script>
             var textArea = window.parent.document.querySelector('textarea');
@@ -216,26 +227,29 @@ if st.session_state.script_text:
                 var totalLines = {len(raw_split)};
                 var targetLine = {target_raw_line};
                 var scrollPos = (targetLine / totalLines) * textArea.scrollHeight;
-                textArea.scrollTop = scrollPos - (textArea.clientHeight / 2);
+                textArea.scrollTop = scrollPos - (textArea.clientHeight / 3);
             }}
             </script>
         """
 
         if st.button("🖱️ CLICK TO EDIT THIS LINE", use_container_width=True):
             st.session_state.playing = False
+            st.session_state.edit_history.append({
+                "block": curr_idx + 1, "text": current_line_text, "idx": curr_idx, "time": time.time()
+            })
+            st.session_state.undo_stack.append(st.session_state.script_text)
             components.html(scroll_js + "<script>textArea.focus();</script>", height=0)
 
-    # Editor Area
-    prev_text = st.session_state.script_text
-    st.session_state.script_text = st.text_area("Script", value=st.session_state.script_text, height=500, key="editor", label_visibility="collapsed")
-    if st.session_state.script_text != prev_text:
-        st.session_state.undo_stack.append(prev_text)
+    # Editor Area - value is set only on initialization to prevent cursor jump
+    current_editor_val = st.text_area("Script", value=st.session_state.script_text, height=500, key="editor", label_visibility="collapsed")
+    
+    if current_editor_val != st.session_state.script_text:
+        st.session_state.script_text = current_editor_val
         st.session_state.playing = False
 
     # --- RUNTIME ---
     if st.session_state.playing and lines:
         if st.session_state.current_line_idx < len(lines):
-            # Inject auto-scroll during playback
             components.html(scroll_js, height=0)
             
             idx = st.session_state.current_line_idx
@@ -266,7 +280,6 @@ if st.session_state.script_text:
                 b64 = base64.b64encode(audio_data).decode()
                 audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
-
                 w_count = len(read_text.split())
                 wait_time = (max(1.8, (w_count / 140) * 60)) / speed_factor
                 time.sleep(wait_time + 0.3)
