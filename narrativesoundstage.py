@@ -2,6 +2,20 @@ import streamlit as st
 from docx import Document
 import io
 
+
+import re
+
+def extract_characters(script_text):
+    # This regex looks for lines that are ALL CAPS (at least 2 letters) 
+    # and not common scene headings like INT. or EXT.
+    potential_names = re.findall(r'^[A-Z]{2,}(?:\s[A-Z]{2,})*$', script_text, re.MULTILINE)
+    
+    # Filter out common screenplay noise
+    exclude = ["INT.", "EXT.", "CUT TO:", "FADE IN:", "FADE OUT:", "CONTINUED:"]
+    cast_list = sorted(list(set([name for name in potential_names if name not in exclude])))
+    
+    return cast_list
+
 # UX Header
 st.title("🎭 Narrative Soundstage")
 st.subheader("Turn your screenplay into a live table read.")
