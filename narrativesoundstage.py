@@ -19,6 +19,8 @@ def init_state():
     if "playing" not in st.session_state: st.session_state.playing = False
     if "current_line_idx" not in st.session_state: st.session_state.current_line_idx = 0
     if "last_active_role" not in st.session_state: st.session_state.last_active_role = "NARRATOR"
+    # Essential for forcing the text_area to refresh when Undo/Redo is clicked
+    if "editor_version" not in st.session_state: st.session_state.editor_version = 0
 
 init_state()
 
@@ -62,30 +64,43 @@ def get_docx_download(text):
 # --- UI SETUP ---
 st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
+# CSS: Keeping it clean to ensure Side Nav visibility
 st.markdown("""
     <style>
-    /* Remove streamlit padding */
-    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
-    .element-container { margin-bottom: 0.2rem !important; }
-    
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 95% !important;
+    }
+    [data-testid="stVerticalBlock"] > div {
+        gap: 0.1rem !important;
+    }
+    /* Fixed header modified to not overlap sidebar toggle */
     .compact-header {
         font-family: 'Courier New', Courier, monospace;
-        background-color: #262730; padding: 5px 15px; border-radius: 4px;
-        color: #ffd600; font-size: 14px; margin-bottom: 5px;
-        display: flex; justify-content: space-between; align-items: center;
+        background-color: #262730; 
+        padding: 10px 20px; 
+        border-radius: 4px;
+        color: #ffd600; 
+        font-size: 16px; 
+        margin-bottom: 10px;
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        border: 1px solid #ffd600;
     }
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
         background-color: #ffffff !important; color: #000000 !important;
-        font-size: 18px !important; line-height: 1.6 !important; padding: 30px !important;
+        font-size: 18px !important; line-height: 1.6 !important; padding: 40px !important;
     }
     .performance-monitor {
-        background-color: #1e1e1e; color: #ffffff; padding: 12px;
-        border-radius: 8px; border-left: 8px solid #ffd600;
-        font-family: 'Courier New', Courier, monospace; margin-bottom: 5px;
+        background-color: #1e1e1e; color: #ffffff; padding: 15px;
+        border-radius: 8px; border-left: 10px solid #ffd600;
+        font-family: 'Courier New', Courier, monospace; margin-bottom: 10px;
     }
-    .active-line { color: #ffd600; font-weight: bold; font-size: 22px; display: block; }
-    .stats-badge { background-color: #ffd600; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; margin-top: 5px; }
+    .stats-badge { background-color: #ffd600; color: #000; padding: 2px 10px; border-radius: 4px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -101,6 +116,7 @@ FREE_VOICES = {
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
 word_count = len(st.session_state.script_text.split()) if st.session_state.script_text else 0
 
+# --- HEADER ---
 st.markdown(f'''
     <div class="compact-header">
         <span>🎭 NARRATIVE SOUNDSTAGE: PRO</span>
@@ -130,16 +146,30 @@ with st.sidebar:
             st.session_state.playing = False
             st.rerun()
 
+    st.divider()
+    st.subheader("🔍 Find & Replace")
+    f_text = st.text_input("Find...")
+    r_text = st.text_input("Replace with...")
+    if st.button("Apply Replace", use_container_width=True):
+        if f_text:
+            st.session_state.undo_stack.append(st.session_state.script_text)
+            st.session_state.script_text = st.session_state.script_text.replace(f_text, r_text)
+            st.session_state.editor_version += 1
+            st.rerun()
+
+    st.divider()
     h_col1, h_col2 = st.columns(2)
     with h_col1:
         if st.button("↩️ UNDO", use_container_width=True, disabled=len(st.session_state.undo_stack) < 1):
             st.session_state.redo_stack.append(st.session_state.script_text)
             st.session_state.script_text = st.session_state.undo_stack.pop()
+            st.session_state.editor_version += 1 
             st.rerun()
     with h_col2:
         if st.button("↪️ REDO", use_container_width=True, disabled=len(st.session_state.redo_stack) < 1):
             st.session_state.undo_stack.append(st.session_state.script_text)
             st.session_state.script_text = st.session_state.redo_stack.pop()
+            st.session_state.editor_version += 1 
             st.rerun()
 
     st.divider()
@@ -212,9 +242,9 @@ if st.session_state.script_text:
         
         st.markdown(f"""
             <div class="performance-monitor">
-                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px;">
-                    <span style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</span>
-                    <span style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</span>
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</small>
+                    <small style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</small>
                 </div>
                 <span class="active-line">{current_line_text}</span>
             </div>
@@ -222,13 +252,21 @@ if st.session_state.script_text:
         
         scroll_js = f"""
             <script>
-            var textArea = window.parent.document.querySelector('textarea');
-            if (textArea) {{
-                var totalLines = {len(raw_split)};
-                var targetLine = {target_raw_line};
-                var scrollPos = (targetLine / totalLines) * textArea.scrollHeight;
-                textArea.scrollTop = scrollPos - (textArea.clientHeight / 3);
-            }}
+            setTimeout(function() {{
+                var textArea = window.parent.document.querySelector('textarea');
+                if (textArea) {{
+                    var text = textArea.value;
+                    var lines = text.split('\\n');
+                    var charPos = 0;
+                    for (var i = 0; i < Math.min({target_raw_line}, lines.length); i++) {{
+                        charPos += lines[i].length + 1;
+                    }}
+                    textArea.focus();
+                    textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
+                    var scrollPos = ({target_raw_line} / lines.length) * textArea.scrollHeight;
+                    textArea.scrollTop = scrollPos - (textArea.clientHeight / 2);
+                }}
+            }}, 100);
             </script>
         """
 
@@ -237,13 +275,23 @@ if st.session_state.script_text:
             st.session_state.edit_history.append({
                 "block": curr_idx + 1, "text": current_line_text, "idx": curr_idx, "time": time.time()
             })
-            st.session_state.undo_stack.append(st.session_state.script_text)
-            components.html(scroll_js + "<script>textArea.focus();</script>", height=0)
+            if not st.session_state.undo_stack or st.session_state.undo_stack[-1] != st.session_state.script_text:
+                st.session_state.undo_stack.append(st.session_state.script_text)
+            components.html(scroll_js, height=0)
 
-    # Editor Area - value is set only on initialization to prevent cursor jump
-    current_editor_val = st.text_area("Script", value=st.session_state.script_text, height=500, key="editor", label_visibility="collapsed")
+    # Editor Area - versioned key ensures refresh on Undo/Redo
+    current_editor_val = st.text_area(
+        "Script", 
+        value=st.session_state.script_text, 
+        height=500, 
+        key=f"editor_v{st.session_state.editor_version}", 
+        label_visibility="collapsed"
+    )
     
     if current_editor_val != st.session_state.script_text:
+        # Prevent undo-spam for single keystrokes
+        if abs(len(current_editor_val) - len(st.session_state.script_text)) > 1:
+            st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = current_editor_val
         st.session_state.playing = False
 
