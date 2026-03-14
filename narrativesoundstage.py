@@ -13,14 +13,15 @@ def init_state():
     if "script_text" not in st.session_state: st.session_state.script_text = ""
     if "undo_stack" not in st.session_state: st.session_state.undo_stack = []
     if "redo_stack" not in st.session_state: st.session_state.redo_stack = []
-    if "voice_map" not in st.session_state: st.session_state.voice_map = {"NARRATOR": "en-GB-RyanNeural"}
+    if "voice_map" not in st.session_state: 
+        st.session_state.voice_map = {"NARRATOR": "en-GB-RyanNeural"}
     if "playing" not in st.session_state: st.session_state.playing = False
     if "current_line_idx" not in st.session_state: st.session_state.current_line_idx = 0
     if "last_active_role" not in st.session_state: st.session_state.last_active_role = "NARRATOR"
 
 init_state()
 
-# --- 2. LOGIC FUNCTIONS ---
+# --- LOGIC: AUDIO ENGINE ---
 async def generate_voice_bytes(text, voice_id, rate="+0%"):
     try:
         communicate = edge_tts.Communicate(text, voice_id, rate=rate)
@@ -31,6 +32,18 @@ async def generate_voice_bytes(text, voice_id, rate="+0%"):
         return audio_data
     except Exception:
         return None
+
+def normalize_script_spacing(text):
+    # Replaces 3 or more newlines with exactly 2 (one empty line between text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+def guess_gender(name):
+    fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER']
+    name_up = name.upper()
+    if any(hint in name_up for hint in fem_hints) or name_up.endswith('A'):
+        return "en-US-AriaNeural"
+    return "en-US-GuyNeural"
 
 def extract_characters(script_text):
     potential_names = re.findall(r'^[A-Z][A-Z\s]+$', script_text, re.MULTILINE)
@@ -46,70 +59,58 @@ def get_docx_download(text):
     doc.save(bio)
     return bio.getvalue()
 
-# --- 3. UI SETUP & CSS ---
+# --- UI SETUP ---
 st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; max-width: 95% !important; }
-    section[data-testid="stSidebar"] { width: 300px !important; }
-    
     .compact-header {
         font-family: 'Courier New', Courier, monospace;
-        background-color: #1a1a1a;
-        padding: 8px 15px;
-        border-radius: 4px;
-        border-bottom: 2px solid #ffd600;
-        color: #ffd600;
-        font-size: 13px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        background-color: #262730; padding: 5px 15px; border-radius: 4px;
+        color: #ffd600; font-size: 14px; margin-bottom: 10px;
+        display: flex; justify-content: space-between; align-items: center;
     }
-
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
-        background-color: #fdfdfd !important;
-        color: #111 !important;
-        font-size: 17px !important;
-        line-height: 1.5 !important;
-        padding: 35px !important;
+        background-color: #ffffff !important; color: #000000 !important;
+        font-size: 18px !important; line-height: 1.6 !important; padding: 40px !important;
     }
-
     .performance-monitor {
-        background-color: #1e1e1e;
-        color: #ffffff;
-        padding: 12px;
-        border-radius: 4px;
-        border-left: 5px solid #ffd600;
-        font-family: 'Courier New', Courier, monospace;
-        margin-bottom: 10px;
+        background-color: #1e1e1e; color: #ffffff; padding: 15px;
+        border-radius: 8px; border-left: 8px solid #ffd600;
+        font-family: 'Courier New', Courier, monospace; margin-bottom: 15px;
     }
-    .active-line { color: #ffd600; font-weight: bold; font-size: 20px; display: block; margin-top: 5px; }
-    
-    /* Clean up Streamlit UI */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; }
+    .stats-badge { background-color: #ffd600; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
 FREE_VOICES = {
-    "Guy (Male)": "en-US-GuyNeural",
-    "Aria (Female)": "en-US-AriaNeural",
-    "Christopher (Deep)": "en-US-ChristopherNeural",
-    "Jenny (Friendly)": "en-US-JennyNeural",
-    "Eric (Narrative)": "en-GB-RyanNeural",
-    "Sonia (British)": "en-GB-SoniaNeural"
+    "Guy (Male - Resonant)": "en-US-GuyNeural",
+    "Aria (Female - Clear)": "en-US-AriaNeural",
+    "Christopher (Male - Deep)": "en-US-ChristopherNeural",
+    "Jenny (Female - Friendly)": "en-US-JennyNeural",
+    "Eric (Male - Narrative)": "en-GB-RyanNeural",
+    "Sonia (Female - British)": "en-GB-SoniaNeural"
 }
 
-# --- 4. SIDEBAR CONTROLS ---
+VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
+word_count = len(st.session_state.script_text.split()) if st.session_state.script_text else 0
+
+st.markdown(f'''
+    <div class="compact-header">
+        <span>🎭 NARRATIVE SOUNDSTAGE: PRO</span>
+        <span>WORDS: <span class="stats-badge">{word_count}</span></span>
+    </div>
+''', unsafe_allow_html=True)
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 🎬 **STUDIO CONTROLS**")
+    st.title("🎬 Studio Controls")
+    speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1, key="speed")
+    rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
-    # Transport Controls
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns(2)
     with col1:
         if st.session_state.playing:
             if st.button("⏸️ PAUSE", use_container_width=True):
@@ -120,17 +121,11 @@ with st.sidebar:
                 st.session_state.playing = True
                 st.rerun()
     with col2:
-        if st.button("🔄", use_container_width=True, help="Reset to Top"):
+        if st.button("🔄 RESET", use_container_width=True):
             st.session_state.current_line_idx = 0
             st.session_state.playing = False
             st.rerun()
 
-    speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1)
-    rate_str = f"{int((speed_factor - 1) * 100):+d}%"
-
-    st.markdown("---")
-    
-    # Navigation and History
     h_col1, h_col2 = st.columns(2)
     with h_col1:
         if st.button("↩️ UNDO", use_container_width=True, disabled=not st.session_state.undo_stack):
@@ -143,115 +138,142 @@ with st.sidebar:
             st.session_state.script_text = st.session_state.redo_stack.pop()
             st.rerun()
 
-    st.markdown("---")
-    
-    # Jump Logic
-    j1, j2 = st.columns([1, 1])
-    with j1:
-        jump_line = st.number_input("Line", min_value=1, value=st.session_state.current_line_idx + 1, label_visibility="collapsed")
-    with j2:
-        if st.button("🚀 JUMP", use_container_width=True):
-            st.session_state.current_line_idx = int(jump_line) - 1
-            st.rerun()
+    st.divider()
+    jump_line = st.number_input("Jump to Line #", min_value=1, value=st.session_state.current_line_idx + 1)
+    if st.button("🚀 Jump"):
+        st.session_state.current_line_idx = int(jump_line) - 1
+        st.rerun()
 
-    # Audio Engine Slot (Hidden)
     audio_engine_slot = st.empty()
-
     if st.session_state.script_text:
-        st.markdown("---")
         docx_data = get_docx_download(st.session_state.script_text)
-        st.download_button("💾 EXPORT DOCX", docx_data, "Script_Updated.docx", use_container_width=True)
+        st.download_button("💾 Export .docx", docx_data, "Script_Updated.docx", use_container_width=True)
 
-# --- 5. MAIN CONTENT ---
-word_count = len(st.session_state.script_text.split()) if st.session_state.script_text else 0
-
-st.markdown(f'''
-    <div class="compact-header">
-        <span>🎭 NARRATIVE SOUNDSTAGE: PRO</span>
-        <span>WORDS: <b>{word_count}</b></span>
-    </div>
-''', unsafe_allow_html=True)
-
-uploaded_file = st.file_uploader("Upload", type=["docx"], key="file_input", label_visibility="collapsed")
+# --- MAIN INTERFACE ---
+uploaded_file = st.file_uploader("Upload Script", type=["docx"], key="file_input", label_visibility="collapsed")
 
 if uploaded_file:
     doc = Document(uploaded_file)
-    new_text = "\n".join([p.text for p in doc.paragraphs])
-    if new_text != st.session_state.script_text:
-        st.session_state.undo_stack.append(st.session_state.script_text)
-        st.session_state.script_text = new_text
+    raw_text = "\n".join([p.text for p in doc.paragraphs])
+    normalized_text = normalize_script_spacing(raw_text)
+    if normalized_text != st.session_state.script_text:
+        st.session_state.script_text = normalized_text
         st.session_state.current_line_idx = 0
         st.rerun()
 
 if st.session_state.script_text:
     cast_list = extract_characters(st.session_state.script_text)
     
-    with st.expander("👤 CASTING OFFICE"):
+    with st.expander("👤 Casting Office"):
         c1, c2 = st.columns(2)
-        for i, name in enumerate(cast_list):
-            with (c1 if i % 2 == 0 else c2):
-                st.session_state.voice_map[name] = st.selectbox(f"Role: {name}", list(FREE_VOICES.keys()), key=f"v_sel_{name}")
-        st.session_state.voice_map["NARRATOR"] = st.selectbox("Narrator Voice", list(FREE_VOICES.keys()), index=4)
+        current_n_id = st.session_state.voice_map.get("NARRATOR", "en-GB-RyanNeural")
+        n_label = VOICE_LABELS.get(current_n_id, "Eric (Male - Narrative)")
+        chosen_n = st.selectbox("Narrator Voice", list(FREE_VOICES.keys()), index=list(FREE_VOICES.keys()).index(n_label))
+        st.session_state.voice_map["NARRATOR"] = FREE_VOICES[chosen_n]
 
-    # Highlighter / Performance Monitor
-    lines = [l.strip() for l in st.session_state.script_text.split("\n") if l.strip()]
+        for i, name in enumerate(cast_list):
+            if name not in st.session_state.voice_map:
+                st.session_state.voice_map[name] = guess_gender(name)
+            with (c1 if i % 2 == 0 else c2):
+                current_v_id = st.session_state.voice_map[name]
+                v_label = VOICE_LABELS.get(current_v_id, "Guy (Male - Resonant)")
+                chosen_v = st.selectbox(f"Role: {name}", list(FREE_VOICES.keys()), index=list(FREE_VOICES.keys()).index(v_label), key=f"v_sel_{name}")
+                st.session_state.voice_map[name] = FREE_VOICES[chosen_v]
+
+    # Parsing Script (Strict Tracking of Raw Line Index)
+    raw_split = st.session_state.script_text.split('\n')
+    lines = []
+    for i, line in enumerate(raw_split):
+        stripped = line.strip()
+        if not stripped: continue
+        is_dialogue = False
+        if i > 0:
+            prev = raw_split[i-1].strip()
+            if prev in cast_list or (prev.startswith('(') and prev.endswith(')')):
+                is_dialogue = True
+        lines.append({"text": stripped, "is_dialogue": is_dialogue, "raw_line_num": i})
+
     if lines:
         curr_idx = min(st.session_state.current_line_idx, len(lines)-1)
-        current_line_text = lines[curr_idx]
+        current_line_text = lines[curr_idx]["text"]
+        target_raw_line = lines[curr_idx]["raw_line_num"]
         
         st.markdown(f"""
             <div class="performance-monitor">
-                <small style="color:#ffd600;">LINE {curr_idx + 1} / {len(lines)} | {"● PLAYING" if st.session_state.playing else "○ READY"}</small>
+                <div style="display: flex; justify-content: space-between;">
+                    <small style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</small>
+                    <small style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</small>
+                </div>
                 <span class="active-line">{current_line_text}</span>
             </div>
         """, unsafe_allow_html=True)
+        
+        # JS Function for Pixel-Perfect Scrolling
+        scroll_js = f"""
+            <script>
+            var textArea = window.parent.document.querySelector('textarea');
+            if (textArea) {{
+                var totalLines = {len(raw_split)};
+                var targetLine = {target_raw_line};
+                var scrollPos = (targetLine / totalLines) * textArea.scrollHeight;
+                textArea.scrollTop = scrollPos - (textArea.clientHeight / 2);
+            }}
+            </script>
+        """
 
-    # Editor
+        if st.button("🖱️ CLICK TO EDIT THIS LINE", use_container_width=True):
+            st.session_state.playing = False
+            components.html(scroll_js + "<script>textArea.focus();</script>", height=0)
+
+    # Editor Area
     prev_text = st.session_state.script_text
-    st.session_state.script_text = st.text_area("Editor", value=st.session_state.script_text, height=450, key="editor", label_visibility="collapsed")
-    
+    st.session_state.script_text = st.text_area("Script", value=st.session_state.script_text, height=500, key="editor", label_visibility="collapsed")
     if st.session_state.script_text != prev_text:
         st.session_state.undo_stack.append(prev_text)
-        st.session_state.redo_stack = [] 
         st.session_state.playing = False
 
-# --- 6. RUNTIME TTS ---
-if st.session_state.playing and lines:
-    if st.session_state.current_line_idx < len(lines):
-        idx = st.session_state.current_line_idx
-        line_content = lines[idx]
-        
-        # Determine Speaker
-        if line_content in cast_list:
-            st.session_state.last_active_role = line_content
-            current_role = "NARRATOR"
-            read_text = f"{line_content}."
-        elif line_content.isupper() and any(x in line_content for x in ["INT.", "EXT.", "DAY", "NIGHT"]):
-            st.session_state.last_active_role = "NARRATOR"
-            current_role = "NARRATOR"
-            read_text = line_content
+    # --- RUNTIME ---
+    if st.session_state.playing and lines:
+        if st.session_state.current_line_idx < len(lines):
+            # Inject auto-scroll during playback
+            components.html(scroll_js, height=0)
+            
+            idx = st.session_state.current_line_idx
+            line_data = lines[idx]
+            line_content = line_data["text"]
+            
+            if line_content in cast_list:
+                st.session_state.last_active_role = line_content
+                current_role = "NARRATOR"
+                read_text = f"{line_content}."
+            elif line_content.isupper() and any(x in line_content for x in ["INT.", "EXT.", "DAY", "NIGHT"]):
+                st.session_state.last_active_role = "NARRATOR"
+                current_role = "NARRATOR"
+                read_text = line_content
+            elif line_data["is_dialogue"]:
+                current_role = st.session_state.last_active_role
+                read_text = line_content
+            else:
+                st.session_state.last_active_role = "NARRATOR"
+                current_role = "NARRATOR"
+                read_text = line_content
+
+            v_id = st.session_state.voice_map.get(current_role, st.session_state.voice_map["NARRATOR"])
+            loop = asyncio.new_event_loop()
+            audio_data = loop.run_until_complete(generate_voice_bytes(read_text, v_id, rate=rate_str))
+            
+            if audio_data:
+                b64 = base64.b64encode(audio_data).decode()
+                audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
+                audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
+
+                w_count = len(read_text.split())
+                wait_time = (max(1.8, (w_count / 140) * 60)) / speed_factor
+                time.sleep(wait_time + 0.3)
+            
+            st.session_state.current_line_idx += 1
+            st.rerun()
         else:
-            current_role = st.session_state.last_active_role
-            read_text = re.sub(r'\(.*?\)', '', line_content)
-
-        v_label = st.session_state.voice_map.get(current_role, "Eric (Narrative)")
-        v_id = FREE_VOICES.get(v_label, "en-GB-RyanNeural")
-        
-        loop = asyncio.new_event_loop()
-        audio_data = loop.run_until_complete(generate_voice_bytes(read_text, v_id, rate=rate_str))
-        
-        if audio_data:
-            b64 = base64.b64encode(audio_data).decode()
-            audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
-            audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
-
-        # Pause duration based on words
-        wait_time = (max(2.0, (len(read_text.split()) / 130) * 60)) / speed_factor
-        time.sleep(wait_time)
-        
-        st.session_state.current_line_idx += 1
-        st.rerun()
-    else:
-        st.session_state.playing = False
-        st.session_state.current_line_idx = 0
-        st.rerun()
+            st.session_state.playing = False
+            st.session_state.current_line_idx = 0
+            st.rerun()
