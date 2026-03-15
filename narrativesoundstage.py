@@ -198,12 +198,41 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 FREE_VOICES = {
+
+    # --- MALE ---
+
     "Guy (Male - Resonant)": "en-US-GuyNeural",
-    "Aria (Female - Clear)": "en-US-AriaNeural",
-    "Christopher (Male - Deep)": "en-US-ChristopherNeural",
-    "Jenny (Female - Friendly)": "en-US-JennyNeural",
+
+    "Christopher (Male - Deep/Serious)": "en-US-ChristopherNeural",
+
     "Eric (Male - Narrative)": "en-GB-RyanNeural",
-    "Sonia (Female - British)": "en-GB-SoniaNeural"
+
+    "Steffan (Male - Welsh/Distinct)": "en-GB-SteffanNeural",
+
+    "Thomas (Male - British/Formal)": "en-GB-ThomasNeural",
+
+    "Andrew (Male - Energetic)": "en-US-AndrewNeural",
+
+    "Brian (Male - Solid/Newsroom)": "en-US-BrianNeural",
+
+    
+
+    # --- FEMALE ---
+
+    "Aria (Female - Clear/Pro)": "en-US-AriaNeural",
+
+    "Jenny (Female - Friendly)": "en-US-JennyNeural",
+
+    "Sonia (Female - British/Soft)": "en-GB-SoniaNeural",
+
+    "Libby (Female - British/Bright)": "en-GB-LibbyNeural",
+
+    "Michelle (Female - Mature/Authoritative)": "en-US-MichelleNeural",
+
+    "Emma (Female - British/Classic)": "en-GB-MaisieNeural",
+
+    "Ava (Female - Gen-Z/Casual)": "en-US-AvaNeural",
+
 }
 
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
