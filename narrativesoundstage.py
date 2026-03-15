@@ -22,6 +22,7 @@ def init_state():
     if "current_line_idx" not in st.session_state: st.session_state.current_line_idx = 0
     if "last_active_role" not in st.session_state: st.session_state.last_active_role = "NARRATOR"
     if "editor_version" not in st.session_state: st.session_state.editor_version = 0
+    if "trigger_scroll" not in st.session_state: st.session_state.trigger_scroll = False
 
 init_state()
 
@@ -97,15 +98,15 @@ st.markdown("""
         align-items: center;
         border: 1px solid #ffd600;
     }
-    /* Sticky Teleprompter Container */
+    /* Sticky Teleprompter Style */
     .sticky-prompter {
         position: -webkit-sticky;
         position: sticky;
-        top: 2rem;
-        z-index: 1000;
+        top: 0;
+        z-index: 999;
         background-color: #0e1117;
-        padding: 10px 0;
-        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #333;
     }
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
@@ -145,10 +146,9 @@ st.markdown(f'''
 with st.sidebar:
     st.title("🎬 Studio Controls")
     
-    # CUTOFF ADJUSTMENT
-    st.subheader("⏱️ Timing Tweaks")
-    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.2, 0.1, help="Add extra silence to the end of lines to prevent audio cutoff.")
-    
+    # 1. ADJUST READING CUTOFF
+    st.subheader("⏱️ Reading Controls")
+    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.3, 0.1, help="Increase this if the audio cuts off too early.")
     speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
@@ -163,33 +163,11 @@ with st.sidebar:
                 st.session_state.playing = True
                 st.rerun()
     with col2:
-        if st.button("🔄 RESET", use_container_width=True):
+        if st.button("🔄 RESTART", use_container_width=True):
             st.session_state.current_line_idx = 0
             st.session_state.playing = False
             st.rerun()
-
-    # EDIT CURRENT LINE MOVED TO SIDEBAR
-    st.divider()
-    if st.session_state.script_text and not st.session_state.playing:
-        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True):
-            # We'll trigger the JS scroll via a session state flag or empty slot
-            st.session_state.trigger_scroll = True
-            st.rerun()
-
-    st.divider()
-    st.subheader("🔍 Find & Replace")
-    f_text = st.text_input("Find text...")
-    r_text = st.text_input("Replace with...")
-    match_whole = st.checkbox("Match whole words only")
-    
-    if st.button("Apply Replace", use_container_width=True):
-        if f_text:
-            st.session_state.undo_stack.append(st.session_state.script_text)
-            st.session_state.script_text = st.session_state.script_text.replace(f_text, r_text)
-            st.session_state.editor_version += 1
-            st.rerun()
-
-    st.divider()
+            
     h_col1, h_col2 = st.columns(2)
     with h_col1:
         if st.button("↩️ UNDO", use_container_width=True, disabled=len(st.session_state.undo_stack) < 1):
@@ -202,19 +180,31 @@ with st.sidebar:
             st.session_state.undo_stack.append(st.session_state.script_text)
             st.session_state.script_text = st.session_state.redo_stack.pop()
             st.session_state.editor_version += 1 
+            st.rerun()        
+
+    # 2. EDIT CURRENT LINE (MOVED HERE)
+   
+    if st.session_state.script_text:
+        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True, type="secondary"):
+            st.session_state.playing = False
+            st.session_state.trigger_scroll = True
             st.rerun()
 
-    st.divider()
-    st.subheader("📍 Jump History")
-    if st.session_state.edit_history:
-        for item in reversed(st.session_state.edit_history[-5:]):
-            if st.button(f"L{item['block']}: {item['text'][:15]}...", key=f"hist_{item['time']}", use_container_width=True):
-                st.session_state.current_line_idx = item['idx']
-                st.rerun()
+   
+    st.subheader("🔍 Find & Replace")
+    f_text = st.text_input("Find text...")
+    r_text = st.text_input("Replace with...")
+    
+    if st.button("Apply Replace", use_container_width=True):
+        if f_text:
+            st.session_state.undo_stack.append(st.session_state.script_text)
+            st.session_state.script_text = st.session_state.script_text.replace(f_text, r_text)
+            st.session_state.editor_version += 1
+            st.rerun()
 
-    st.divider()
+    st.subheader("📍 Navigation")
     jump_line = st.number_input("Jump to Block #", min_value=1, value=st.session_state.current_line_idx + 1)
-    if st.button("🚀 Jump"):
+    if st.button("🚀 Jump", use_container_width=True):
         st.session_state.current_line_idx = int(jump_line) - 1
         st.rerun()
 
@@ -273,7 +263,7 @@ if st.session_state.script_text:
         current_line_text = lines[curr_idx]["text"]
         target_raw_line = lines[curr_idx]["raw_line_num"]
         
-        # Sticky Teleprompter UI
+        # --- STICKY TELEPROMPTER ---
         st.markdown(f"""
             <div class="sticky-prompter">
                 <div class="performance-monitor">
@@ -306,9 +296,7 @@ if st.session_state.script_text:
             </script>
         """
 
-        # Handle Sidebar Edit Trigger
-        if st.session_state.get("trigger_scroll", False):
-            st.session_state.playing = False
+        if st.session_state.trigger_scroll:
             st.session_state.edit_history.append({
                 "block": curr_idx + 1, "text": current_line_text, "idx": curr_idx, "time": time.time()
             })
@@ -317,11 +305,11 @@ if st.session_state.script_text:
             components.html(scroll_js, height=0)
             st.session_state.trigger_scroll = False
 
-    # Expanded Editor Height
+    # --- EXPANDED EDITOR ---
     current_editor_val = st.text_area(
         "Script", 
         value=st.session_state.script_text, 
-        height=800, 
+        height=900, 
         key=f"editor_v{st.session_state.editor_version}", 
         label_visibility="collapsed"
     )
@@ -341,6 +329,7 @@ if st.session_state.script_text:
             line_data = lines[idx]
             line_content = line_data["text"]
             
+            # Identify Speaker
             if line_content in cast_list:
                 st.session_state.last_active_role = line_content
                 current_role = "NARRATOR"
@@ -367,9 +356,9 @@ if st.session_state.script_text:
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
                 w_count = len(read_text.split())
                 
-                # Dynamic wait time + User-defined pause buffer
+                # Math for timing + the manual pause_buffer
                 wait_time = ((max(2.2, (w_count / 140) * 60)) / speed_factor) + pause_buffer
-                time.sleep(wait_time + 0.1)
+                time.sleep(wait_time)
             
             st.session_state.current_line_idx += 1
             st.rerun()
