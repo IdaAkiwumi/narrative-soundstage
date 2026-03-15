@@ -4,3 +4,4 @@ fountain
 openai
 elevenlabs
 python-dotenv
+edge-tts
