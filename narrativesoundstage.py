@@ -33,6 +33,7 @@ import io
 import base64
 import time
 import streamlit.components.v1 as components
+import random
 
 # --- 1. INITIALIZE STATE ---
 def init_state():
@@ -59,7 +60,8 @@ async def generate_voice_bytes(text, voice_id, rate="+0%"):
             if chunk["type"] == "audio":
                 audio_data += chunk["data"]
         return audio_data
-    except Exception:
+    except Exception as e:
+        st.error(f"Voice Error ({voice_id}): {e}") # This will tell you exactly which one failed
         return None
 
 def normalize_script_spacing(text):
@@ -67,22 +69,70 @@ def normalize_script_spacing(text):
     return text.strip()
 
 def guess_gender(name):
+    """
+    Randomly assigns a voice from the appropriate category to maintain variety.
+    """
+    # Define pools from your FREE_VOICES dictionary
+    males = [
+        "en-US-GuyNeural", "en-US-ChristopherNeural", "en-GB-RyanNeural", 
+        "en-GB-ThomasNeural", "en-AU-WilliamNeural", "en-NG-AbeoNeural", 
+        "ar-AE-HamdanNeural", "ur-PK-AsadNeural", "en-CA-LiamNeural", 
+        "en-US-AndrewNeural", "en-US-BrianNeural", "en-ZA-LukeNeural", 
+        "en-KE-ChilembaNeural", "zu-ZA-ThembaNeural"
+    ]
+    
+    females = [
+        "en-US-AriaNeural", "en-US-JennyNeural", "en-GB-SoniaNeural", 
+        "en-GB-LibbyNeural", "en-GB-MaisieNeural", "en-NG-EzinneNeural", 
+        "en-AU-NatashaNeural", "ar-AE-FatimaNeural", "zh-HK-HiuGaaiNeural", 
+        "es-US-PalomaNeural", "en-US-AvaNeural", "en-US-EmmaNeural", 
+        "en-KE-AsiliaNeural", "en-TZ-ImaniNeural", "en-ZA-LeahNeural"
+    ]
+
     fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER', 'QUEEN', 'LADY']
     masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD']
     
     name_up = name.upper()
+    
+    # Logic for selection
     if any(hint in name_up for hint in fem_hints) or name_up.endswith('A'):
-        return "en-US-AriaNeural"
+        return random.choice(females)
     if any(hint in name_up for hint in masc_hints):
-        return "en-US-ChristopherNeural" # Give them a deeper, "tough guy" voice
-    return "en-US-GuyNeural"
+        return random.choice(males)
+    
+    # If no hint, pick from the entire pool for maximum randomness
+    return random.choice(males + females)
 
 def extract_characters(script_text):
-    # Added \d to allow numbers (like HENCHMAN 1) and \. to allow names like DR. SMITH
-    potential_names = re.findall(r'^[A-Z][A-Z\d\s\.]+$', script_text, re.MULTILINE)
-    exclude = ["INT.", "EXT.", "CUT TO:", "FADE IN:", "FADE OUT:", "CONTINUED:", "V.O.", "O.C.", "THE END", "ACT ONE", "SCENE", "TITLE", "CARD", "PAGE", "DAY", "NIGHT"]
-    clean_names = [n.strip() for n in potential_names if n.strip() not in exclude and len(n.strip()) > 1]
+    # Regex finds all-caps lines
+    potential_names = re.findall(r'^(?!INT\.|EXT\.|SCENE|ACT)[A-Z][A-Z\d\s\.]+$', script_text, re.MULTILINE)
+    
+    # Expanded exclusion list for transitions and technical beats
+    exclude = [
+        "INT.", "EXT.", "CUT TO:", "FADE IN:", "FADE OUT:", "CONTINUED:", 
+        "V.O.", "O.C.", "THE END", "ACT ONE", "ACT TWO", "ACT THREE", 
+        "SCENE", "TITLE", "CARD", "PAGE", "DAY", "NIGHT", "DISSOLVE TO:",
+        "MOMENTS LATER", "LATER", "PROLOGUE", "EPILOGUE", "FADE TO:", 
+        "FADE TO BLACK.", "BEAT.", "MATCH CUT:", "JUMP CUT:", "BACK TO:"
+    ]
+    
+    clean_names = []
+    for n in potential_names:
+        name = n.strip()
+        # Filter: 
+        # 1. Not in exclude list
+        # 2. Not ending in a period (usually a transition/beat)
+        # 3. Not just a number
+        # 4. Length > 1
+        if (name not in exclude and 
+            not name.endswith('.') and 
+            len(name) > 1 and 
+            not re.match(r'^\d+\.$', name)):
+            clean_names.append(name)
+            
     return sorted(list(set(clean_names)))
+
+
 
 def get_docx_download(text):
     doc = Document()
@@ -203,41 +253,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 FREE_VOICES = {
-
     # --- MALE ---
-
-    "Guy (Male - Resonant)": "en-US-GuyNeural",
-
-    "Christopher (Male - Deep/Serious)": "en-US-ChristopherNeural",
-
-    "Eric (Male - Narrative)": "en-GB-RyanNeural",
-
-    "Steffan (Male - Welsh/Distinct)": "en-GB-SteffanNeural",
-
-    "Thomas (Male - British/Formal)": "en-GB-ThomasNeural",
-
-    "Andrew (Male - Energetic)": "en-US-AndrewNeural",
-
-    "Brian (Male - Solid/Newsroom)": "en-US-BrianNeural",
-
-    
+    "Guy (Male - US)": "en-US-GuyNeural",
+    "Christopher (Male - Deep)": "en-US-ChristopherNeural",
+    "Eric (Male - UK Narrative)": "en-GB-RyanNeural",
+    "Thomas (Male - UK Formal)": "en-GB-ThomasNeural",
+    "Natascha (Male - AU Aboriginal Hint)": "en-AU-WilliamNeural",
+    "Abeo (Male - African/NG)": "en-NG-AbeoNeural",
+    "Hamdan (Male - Arabic/UAE)": "ar-AE-HamdanNeural",
+    "Asad (Male - Asian/PK)": "ur-PK-AsadNeural",
+    "Liam (Male - Canadian/Latino Hint)": "en-CA-LiamNeural",
+    "Andrew (Male - Energetic/Afro-Latino)": "en-US-AndrewNeural",
+    "Brian (Male - Casual US/Afro-Latino)": "en-US-BrianNeural",
+    "Luke (Male - Caribbean/SA Hint)": "en-ZA-LukeNeural",
+    "Chilemba (Male - East African)": "en-KE-ChilembaNeural",
+    "Themba (Male - Zulu/Southern African)": "zu-ZA-ThembaNeural",
 
     # --- FEMALE ---
-
-    "Aria (Female - Clear/Pro)": "en-US-AriaNeural",
-
-    "Jenny (Female - Friendly)": "en-US-JennyNeural",
-
-    "Sonia (Female - British/Soft)": "en-GB-SoniaNeural",
-
-    "Libby (Female - British/Bright)": "en-GB-LibbyNeural",
-
-    "Michelle (Female - Mature/Authoritative)": "en-US-MichelleNeural",
-
-    "Emma (Female - British/Classic)": "en-GB-MaisieNeural",
-
-    "Ava (Female - Gen-Z/Casual)": "en-US-AvaNeural",
-
+    "Aria (Female - US Pro)": "en-US-AriaNeural",
+    "Jenny (Female - US Friendly)": "en-US-JennyNeural",
+    "Sonia (Female - UK Soft)": "en-GB-SoniaNeural",
+    "Libby (Female - UK Bright/Informal Brit)": "en-GB-LibbyNeural",
+    "Maisie (Female - Informal Brit)": "en-GB-MaisieNeural",
+    "Anike (Female - African/NG)": "en-NG-EzinneNeural",
+    "Natasha (Female - AU Aboriginal Hint)": "en-AU-NatashaNeural",
+    "Fatima (Female - Arabic/UAE)": "ar-AE-FatimaNeural",
+    "Yan (Female - Asian/HK)": "zh-HK-HiuGaaiNeural",
+    "Clara (Female - US Latino Hint)": "es-US-PalomaNeural",
+    "Ava (Female - US Gen-Z/AA Hint)": "en-US-AvaNeural",
+    "Emma (Female - Casual US)": "en-US-EmmaNeural",
+    "Asilia (Female - Caribbean/KE Hint)": "en-KE-AsiliaNeural",
+    "Imani (Female - East African)": "en-TZ-ImaniNeural",
+    "Leah (Female - Southern African)": "en-ZA-LeahNeural",
 }
 
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
