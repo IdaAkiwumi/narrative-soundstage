@@ -77,55 +77,38 @@ st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
 st.markdown("""
     <style>
-    /* 1. HIDE STREAMLIT OVERLAPPING HEADER & FOOTER */
-   /* 1. FIX SIDEBAR TOGGLE & REMOVE OVERLAP */
-[data-testid="stHeader"] {
-    background-color: rgba(0,0,0,0) !important; /* Makes header bar transparent */
-    color: white !important; /* Ensures the toggle button is visible */
-}
-
-/* Push the title down just enough so it doesn't fight with the toggle button */
-.compact-header {
-    margin-top: 35px !important; 
-    z-index: 999999;
-}
-
-/* Ensure the main content doesn't start under the toggle button */
-.block-container {
-    padding-top: 2rem !important;
-}
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
-
-    /* 2. ADJUST MAIN CONTAINER */
-    .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-        max-width: 95% !important;
+    /* 1. FIX SIDEBAR TOGGLE & REMOVE OVERLAP */
+    [data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0) !important;
+        color: white !important;
     }
 
-    /* 3. COMPACT HEADER STYLING */
-    [data-testid="stVerticalBlock"] > div {
-        gap: 0.1rem !important;
-    }
     .compact-header {
+        margin-top: 35px !important; 
+        z-index: 999999;
         font-family: 'Courier New', Courier, monospace;
         background-color: #262730; 
         padding: 10px 20px; 
         border-radius: 4px;
         color: #ffd600; 
         font-size: 16px; 
-        margin-top: 10px;
         margin-bottom: 10px;
         display: flex; 
         justify-content: space-between; 
         align-items: center;
         border: 1px solid #ffd600;
         position: relative;
-        z-index: 999999;
     }
 
-    /* 4. STICKY TELEPROMPTER */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 95% !important;
+    }
+
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+
     .sticky-prompter {
         position: -webkit-sticky;
         position: sticky;
@@ -136,7 +119,6 @@ st.markdown("""
         border-bottom: 1px solid #333;
     }
 
-    /* 5. TEXT AREA STYLING */
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
         background-color: #ffffff !important; 
@@ -178,15 +160,11 @@ st.markdown(f'''
     </div>
 ''', unsafe_allow_html=True)
 
-
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🎬 Studio Controls")
-    
-    # 1. ADJUST READING CUTOFF
     st.subheader("⏱️ Reading Controls")
-    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.6, 0.1, help="Increase this if the audio cuts off too early.")
+    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.6, 0.1)
     speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.4, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
@@ -220,9 +198,8 @@ with st.sidebar:
             st.session_state.editor_version += 1 
             st.rerun()        
 
-    # 2. EDIT CURRENT LINE
     if st.session_state.script_text:
-        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True, type="secondary"):
+        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True):
             st.session_state.playing = False
             st.session_state.trigger_scroll = True
             st.rerun()
@@ -299,7 +276,6 @@ if st.session_state.script_text:
         current_line_text = lines[curr_idx]["text"]
         target_raw_line = lines[curr_idx]["raw_line_num"]
         
-        # --- STICKY TELEPROMPTER ---
         st.markdown(f"""
             <div class="sticky-prompter">
                 <div class="performance-monitor">
@@ -312,7 +288,6 @@ if st.session_state.script_text:
             </div>
         """, unsafe_allow_html=True)
         
-        # --- FIXED SCROLLING LOGIC ---
         scroll_js = f"""
             <script>
             setTimeout(function() {{
@@ -327,25 +302,20 @@ if st.session_state.script_text:
                     textArea.focus();
                     textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
                     
-                    // Center the line in the top third of the editor instead of dead center
-                    var totalScroll = textArea.scrollHeight;
-                    var relativePos = {target_raw_line} / lines.length;
-                    textArea.scrollTop = (totalScroll * relativePos) - 150;
+                    if ({target_raw_line} > 0) {{
+                        var totalScroll = textArea.scrollHeight;
+                        var relativePos = {target_raw_line} / lines.length;
+                        textArea.scrollTop = (totalScroll * relativePos) - 150;
+                    }}
                 }}
             }}, 100);
             </script>
         """
 
         if st.session_state.trigger_scroll:
-            st.session_state.edit_history.append({
-                "block": curr_idx + 1, "text": current_line_text, "idx": curr_idx, "time": time.time()
-            })
-            if not st.session_state.undo_stack or st.session_state.undo_stack[-1] != st.session_state.script_text:
-                st.session_state.undo_stack.append(st.session_state.script_text)
             components.html(scroll_js, height=0)
             st.session_state.trigger_scroll = False
 
-    # --- EXPANDED EDITOR ---
     current_editor_val = st.text_area(
         "Script", 
         value=st.session_state.script_text, 
@@ -355,15 +325,16 @@ if st.session_state.script_text:
     )
     
     if current_editor_val != st.session_state.script_text:
-        if abs(len(current_editor_val) - len(st.session_state.script_text)) > 1:
-            st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = current_editor_val
         st.session_state.playing = False
 
-    # --- RUNTIME ---
+    # --- RUNTIME (FIXED SCROLL & SOUND) ---
     if st.session_state.playing and lines:
         if st.session_state.current_line_idx < len(lines):
-            components.html(scroll_js, height=0)
+            
+            # TRIGGER SCROLL ONLY AFTER LINE 50 
+            if st.session_state.current_line_idx > 50:
+                components.html(scroll_js, height=0)
             
             idx = st.session_state.current_line_idx
             line_data = lines[idx]
@@ -394,7 +365,6 @@ if st.session_state.script_text:
                 audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
                 w_count = len(read_text.split())
-                
                 wait_time = ((max(2.2, (w_count / 140) * 60)) / speed_factor) + pause_buffer
                 time.sleep(wait_time)
             
