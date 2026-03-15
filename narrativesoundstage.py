@@ -481,7 +481,7 @@ if st.session_state.script_text:
             // 28.8 is line height. 
             // Multiplying clientHeight by a smaller decimal (0.05 - 0.1) 
             // puts the line right at the top of the box.
-            var lineHeight = 10; 
+            var lineHeight = 40; 
             var internalOffset = ({target_raw_line} * lineHeight) - (textArea.clientHeight * 0.02);
             
             textArea.scrollTo({{
