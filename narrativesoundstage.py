@@ -223,7 +223,7 @@ st.markdown('<div class="mobile-hint">⬅️ OPEN SIDEBAR FOR STUDIO CONTROLS</d
 with st.sidebar:
     st.title("🎬 Studio Controls")
     st.subheader("⏱️ Reading Controls")
-    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.6, 0.1)
+    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 1.3, 0.1)
     speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.4, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
@@ -332,12 +332,23 @@ if st.session_state.script_text:
     for i, line in enumerate(raw_split):
         stripped = line.strip()
         if not stripped: continue
+        
         is_dialogue = False
-        if i > 0:
+        # Parentheticals should be read by the Narrator, not treated as dialogue
+        is_parenthetical = stripped.startswith('(') and stripped.endswith(')')
+        
+        if i > 0 and not is_parenthetical:
             prev = raw_split[i-1].strip()
+            # Only trigger dialogue if the previous line was a Character or another Parenthetical
             if prev in cast_list or (prev.startswith('(') and prev.endswith(')')):
                 is_dialogue = True
-        lines.append({"text": stripped, "is_dialogue": is_dialogue, "raw_line_num": i})
+        
+        lines.append({
+            "text": stripped, 
+            "is_dialogue": is_dialogue, 
+            "is_parenthetical": is_parenthetical, # New flag
+            "raw_line_num": i
+        })
 
     if lines:
         curr_idx = min(st.session_state.current_line_idx, len(lines)-1)
@@ -408,10 +419,14 @@ if st.session_state.script_text:
             line_data = lines[idx]
             line_content = line_data["text"]
             
+            # --- VOICE SELECTION LOGIC ---
             if line_content in cast_list:
                 st.session_state.last_active_role = line_content
                 current_role = "NARRATOR"
                 read_text = f"{line_content}."
+            elif line_data.get("is_parenthetical"):
+                current_role = "NARRATOR"
+                read_text = line_content
             elif line_content.isupper() and any(x in line_content for x in ["INT.", "EXT.", "DAY", "NIGHT"]):
                 st.session_state.last_active_role = "NARRATOR"
                 current_role = "NARRATOR"
@@ -424,6 +439,7 @@ if st.session_state.script_text:
                 current_role = "NARRATOR"
                 read_text = line_content
 
+            # --- AUDIO EXECUTION ---
             v_id = st.session_state.voice_map.get(current_role, st.session_state.voice_map["NARRATOR"])
             loop = asyncio.new_event_loop()
             audio_data = loop.run_until_complete(generate_voice_bytes(read_text, v_id, rate=rate_str))
@@ -432,6 +448,8 @@ if st.session_state.script_text:
                 b64 = base64.b64encode(audio_data).decode()
                 audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
+                
+                # Timing calculation
                 w_count = len(read_text.split())
                 wait_time = ((max(2.2, (w_count / 140) * 60)) / speed_factor) + pause_buffer
                 time.sleep(wait_time)
