@@ -193,9 +193,8 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
 
     .sticky-prompter {
-        position: -webkit-sticky;
         position: sticky;
-        top: 0;
+        top: 60px; /* Moves below the compact-header */
         z-index: 999;
         background-color: #0e1117;
         padding-bottom: 15px;
@@ -473,19 +472,24 @@ if st.session_state.script_text:
                 charPos += lines[i].length + 1;
             }}
             
-            textArea.focus();
-            // This selection range is what actually forces the scroll to follow the "cursor"
+            // --- SILENT FOCUS ---
+            // preventScroll: true stops the browser from jumping the page to the textarea
+            textArea.focus({{ preventScroll: true }});
             textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
             
-            // Refined calculation for "Center in view"
-            var lineHeight = 28.8; // Based on your 18px font-size * 1.6 line-height
-            var offset = ({target_raw_line} * lineHeight) - (textArea.clientHeight / 2);
+            // --- TOP-HEAVY INTERNAL SCROLL ---
+            // 28.8 is line height. 
+            // Multiplying clientHeight by a smaller decimal (0.05 - 0.1) 
+            // puts the line right at the top of the box.
+            var lineHeight = 10; 
+            var internalOffset = ({target_raw_line} * lineHeight) - (textArea.clientHeight * 0.02);
+            
             textArea.scrollTo({{
-                top: offset,
+                top: internalOffset,
                 behavior: 'smooth'
             }});
         }}
-    }}, 100);
+    }}, 50); // Faster timeout for snappier response
     </script>
 """
 
