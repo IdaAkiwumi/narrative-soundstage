@@ -149,7 +149,7 @@ with st.sidebar:
     # 1. ADJUST READING CUTOFF
     st.subheader("⏱️ Reading Controls")
     pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.6, 0.1, help="Increase this if the audio cuts off too early.")
-    speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1, key="speed")
+    speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.4, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
     col1, col2 = st.columns(2)
