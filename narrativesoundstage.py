@@ -1,5 +1,7 @@
 import streamlit as st
 from docx import Document
+from docx.shared import Pt
+from docx.enum.style import WD_STYLE_TYPE
 import re
 import asyncio
 import edge_tts
@@ -19,7 +21,6 @@ def init_state():
     if "playing" not in st.session_state: st.session_state.playing = False
     if "current_line_idx" not in st.session_state: st.session_state.current_line_idx = 0
     if "last_active_role" not in st.session_state: st.session_state.last_active_role = "NARRATOR"
-    # Essential for forcing the text_area to refresh when Undo/Redo is clicked
     if "editor_version" not in st.session_state: st.session_state.editor_version = 0
 
 init_state()
@@ -55,8 +56,20 @@ def extract_characters(script_text):
 
 def get_docx_download(text):
     doc = Document()
+    
+    # Set default style to Courier 12
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Courier New'
+    font.size = Pt(12)
+    
     for line in text.split('\n'):
-        doc.add_paragraph(line)
+        p = doc.add_paragraph()
+        run = p.add_run(line)
+        # Explicitly setting font on the run ensures it overrides local defaults
+        run.font.name = 'Courier New'
+        run.font.size = Pt(12)
+        
     bio = io.BytesIO()
     doc.save(bio)
     return bio.getvalue()
@@ -64,7 +77,6 @@ def get_docx_download(text):
 # --- UI SETUP ---
 st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
-# CSS: Keeping it clean to ensure Side Nav visibility
 st.markdown("""
     <style>
     .block-container {
@@ -75,7 +87,6 @@ st.markdown("""
     [data-testid="stVerticalBlock"] > div {
         gap: 0.1rem !important;
     }
-    /* Fixed header modified to not overlap sidebar toggle */
     .compact-header {
         font-family: 'Courier New', Courier, monospace;
         background-color: #262730; 
@@ -116,7 +127,6 @@ FREE_VOICES = {
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
 word_count = len(st.session_state.script_text.split()) if st.session_state.script_text else 0
 
-# --- HEADER ---
 st.markdown(f'''
     <div class="compact-header">
         <span>🎭 NARRATIVE SOUNDSTAGE: PRO</span>
@@ -148,8 +158,10 @@ with st.sidebar:
 
     st.divider()
     st.subheader("🔍 Find & Replace")
-    f_text = st.text_input("Find...")
+    f_text = st.text_input("Find text...")
     r_text = st.text_input("Replace with...")
+    st.caption("⚠️ Note: Replacements are case-sensitive.")
+    
     if st.button("Apply Replace", use_container_width=True):
         if f_text:
             st.session_state.undo_stack.append(st.session_state.script_text)
@@ -279,7 +291,6 @@ if st.session_state.script_text:
                 st.session_state.undo_stack.append(st.session_state.script_text)
             components.html(scroll_js, height=0)
 
-    # Editor Area - versioned key ensures refresh on Undo/Redo
     current_editor_val = st.text_area(
         "Script", 
         value=st.session_state.script_text, 
@@ -289,7 +300,6 @@ if st.session_state.script_text:
     )
     
     if current_editor_val != st.session_state.script_text:
-        # Prevent undo-spam for single keystrokes
         if abs(len(current_editor_val) - len(st.session_state.script_text)) > 1:
             st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = current_editor_val
