@@ -61,7 +61,7 @@ Visit the live deployment on **Streamlit Community Cloud** (Link above) to uploa
 ---
 
 ### 🔍 Industry Use Cases
-* **Screenwriters:** Hear the "Soul Debt" in your legal thriller or the "Ghosting" in your rom-com before you submit to competitions.
+* **Screenwriters:** Hear the "Soul" in your legal thriller or the "Ghost" in your rom-com before you submit to competitions.
 * **Producers:** Conduct low-cost initial table reads to check script length and pacing.
 * **Game Designers:** Test branching dialogue flow and character distinctness.
 
