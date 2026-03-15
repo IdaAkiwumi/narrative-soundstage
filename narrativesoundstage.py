@@ -102,7 +102,7 @@ st.set_page_config(
     page_icon="🎭",
     layout="wide"
 )
-
+# CUSTOM CSS FOR STYLING
 st.markdown("""
     <style>
     /* 1. FIX SIDEBAR TOGGLE & REMOVE OVERLAP */
@@ -166,6 +166,34 @@ st.markdown("""
     }
     .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; margin-top: 5px; }
     .stats-badge { background-color: #ffd600; color: #000; padding: 2px 10px; border-radius: 4px; font-weight: bold; }
+   
+   @keyframes pulse-yellow {
+        0% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 214, 0, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 214, 0, 0); }
+    }
+
+    .mobile-hint {
+        display: none;
+        background-color: #ffd600;
+        color: #000;
+        padding: 12px;
+        border-radius: 4px;
+        text-align: center;
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        border: 2px solid #000;
+        animation: pulse-yellow 2s infinite;
+    }
+
+    @media (max-width: 768px) {
+        .mobile-hint {
+            display: block;
+        }
+    }
+   
     </style>
 """, unsafe_allow_html=True)
 
@@ -187,6 +215,9 @@ st.markdown(f'''
         <span>WORDS: <span class="stats-badge">{word_count}</span></span>
     </div>
 ''', unsafe_allow_html=True)
+# This only renders the div; the CSS above handles hiding it on Desktop
+st.markdown('<div class="mobile-hint">⬅️ OPEN SIDEBAR FOR STUDIO CONTROLS</div>', unsafe_allow_html=True)
+
 
 # --- SIDEBAR ---
 with st.sidebar:
