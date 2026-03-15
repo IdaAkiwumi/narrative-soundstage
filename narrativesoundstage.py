@@ -77,11 +77,34 @@ st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 
 st.markdown("""
     <style>
+    /* 1. HIDE STREAMLIT OVERLAPPING HEADER & FOOTER */
+   /* 1. FIX SIDEBAR TOGGLE & REMOVE OVERLAP */
+[data-testid="stHeader"] {
+    background-color: rgba(0,0,0,0) !important; /* Makes header bar transparent */
+    color: white !important; /* Ensures the toggle button is visible */
+}
+
+/* Push the title down just enough so it doesn't fight with the toggle button */
+.compact-header {
+    margin-top: 35px !important; 
+    z-index: 999999;
+}
+
+/* Ensure the main content doesn't start under the toggle button */
+.block-container {
+    padding-top: 2rem !important;
+}
+    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+
+    /* 2. ADJUST MAIN CONTAINER */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0rem !important;
         padding-bottom: 0rem !important;
         max-width: 95% !important;
     }
+
+    /* 3. COMPACT HEADER STYLING */
     [data-testid="stVerticalBlock"] > div {
         gap: 0.1rem !important;
     }
@@ -92,13 +115,17 @@ st.markdown("""
         border-radius: 4px;
         color: #ffd600; 
         font-size: 16px; 
+        margin-top: 10px;
         margin-bottom: 10px;
         display: flex; 
         justify-content: space-between; 
         align-items: center;
         border: 1px solid #ffd600;
+        position: relative;
+        z-index: 999999;
     }
-    /* Sticky Teleprompter Style */
+
+    /* 4. STICKY TELEPROMPTER */
     .sticky-prompter {
         position: -webkit-sticky;
         position: sticky;
@@ -108,14 +135,23 @@ st.markdown("""
         padding-bottom: 15px;
         border-bottom: 1px solid #333;
     }
+
+    /* 5. TEXT AREA STYLING */
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
-        background-color: #ffffff !important; color: #000000 !important;
-        font-size: 18px !important; line-height: 1.6 !important; padding: 40px !important;
+        background-color: #ffffff !important; 
+        color: #000000 !important;
+        font-size: 18px !important; 
+        line-height: 1.6 !important; 
+        padding: 40px !important;
     }
+
     .performance-monitor {
-        background-color: #1e1e1e; color: #ffffff; padding: 15px;
-        border-radius: 8px; border-left: 10px solid #ffd600;
+        background-color: #1e1e1e; 
+        color: #ffffff; 
+        padding: 15px;
+        border-radius: 8px; 
+        border-left: 10px solid #ffd600;
         font-family: 'Courier New', Courier, monospace;
     }
     .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; margin-top: 5px; }
