@@ -142,6 +142,8 @@ st.markdown(f'''
     </div>
 ''', unsafe_allow_html=True)
 
+
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🎬 Studio Controls")
