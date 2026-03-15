@@ -262,13 +262,14 @@ FREE_VOICES = {
     "Abeo (Male - African/NG)": "en-NG-AbeoNeural",
     "Hamdan (Male - Arabic/UAE)": "ar-AE-HamdanNeural",
     "Asad (Male - Asian/PK)": "ur-PK-AsadNeural",
-    "Liam (Male - Canadian/Latino Hint)": "en-CA-LiamNeural",
+    "Liam (Male - Canadian)": "en-CA-LiamNeural", # Ensure en-CA prefix
     "Andrew (Male - Energetic/Afro-Latino)": "en-US-AndrewNeural",
     "Brian (Male - Casual US/Afro-Latino)": "en-US-BrianNeural",
     "Luke (Male - Caribbean/SA Hint)": "en-ZA-LukeNeural",
     "Chilemba (Male - East African)": "en-KE-ChilembaNeural",
     "Themba (Male - Zulu/Southern African)": "zu-ZA-ThembaNeural",
-
+    "Gonzalo (Male - Latino-Strong)": "es-CO-GonzaloNeural",
+    "Emilio (Male - Latino)": "es-DO-EmilioNeural",
     # --- FEMALE ---
     "Aria (Female - US Pro)": "en-US-AriaNeural",
     "Jenny (Female - US Friendly)": "en-US-JennyNeural",
@@ -282,9 +283,11 @@ FREE_VOICES = {
     "Clara (Female - US Latino Hint)": "es-US-PalomaNeural",
     "Ava (Female - US Gen-Z/AA Hint)": "en-US-AvaNeural",
     "Emma (Female - Casual US)": "en-US-EmmaNeural",
-    "Asilia (Female - Caribbean/KE Hint)": "en-KE-AsiliaNeural",
+    "Asilia (Female - African/KE)": "en-KE-AsiliaNeural", # Ensure en-KE prefix
     "Imani (Female - East African)": "en-TZ-ImaniNeural",
     "Leah (Female - Southern African)": "en-ZA-LeahNeural",
+    "Ramona (Female - Latina)": "es-DO-RamonaNeural",
+    "Belkys (Female - Afro Latina/Latina)": "es-CU-BelkysNeural",
 }
 
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
