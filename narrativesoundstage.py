@@ -56,8 +56,6 @@ def extract_characters(script_text):
 
 def get_docx_download(text):
     doc = Document()
-    
-    # Set default style to Courier 12
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Courier New'
@@ -66,7 +64,6 @@ def get_docx_download(text):
     for line in text.split('\n'):
         p = doc.add_paragraph()
         run = p.add_run(line)
-        # Explicitly setting font on the run ensures it overrides local defaults
         run.font.name = 'Courier New'
         run.font.size = Pt(12)
         
@@ -215,6 +212,7 @@ if uploaded_file:
         st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = normalized_text
         st.session_state.current_line_idx = 0
+        st.session_state.editor_version += 1 # Added to refresh the editor on new file
         st.rerun()
 
 if st.session_state.script_text:
@@ -340,8 +338,10 @@ if st.session_state.script_text:
                 audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
                 w_count = len(read_text.split())
-                wait_time = (max(1.8, (w_count / 140) * 60)) / speed_factor
-                time.sleep(wait_time + 0.3)
+                # Updated math: 2.2 base instead of 1.8 to prevent truncation
+                wait_time = (max(2.2, (w_count / 140) * 60)) / speed_factor
+                # Slightly reduced delay (0.1) for snappier transitions
+                time.sleep(wait_time + 0.1)
             
             st.session_state.current_line_idx += 1
             st.rerun()
