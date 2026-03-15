@@ -77,7 +77,7 @@ st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
 st.markdown("""
     <style>
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 0rem !important;
         max-width: 95% !important;
     }
@@ -97,6 +97,16 @@ st.markdown("""
         align-items: center;
         border: 1px solid #ffd600;
     }
+    /* Sticky Teleprompter Container */
+    .sticky-prompter {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 2rem;
+        z-index: 1000;
+        background-color: #0e1117;
+        padding: 10px 0;
+        margin-bottom: 20px;
+    }
     div[data-testid="stTextArea"] textarea {
         font-family: 'Courier New', Courier, monospace !important;
         background-color: #ffffff !important; color: #000000 !important;
@@ -105,7 +115,7 @@ st.markdown("""
     .performance-monitor {
         background-color: #1e1e1e; color: #ffffff; padding: 15px;
         border-radius: 8px; border-left: 10px solid #ffd600;
-        font-family: 'Courier New', Courier, monospace; margin-bottom: 10px;
+        font-family: 'Courier New', Courier, monospace;
     }
     .active-line { color: #ffd600; font-weight: bold; font-size: 24px; display: block; margin-top: 5px; }
     .stats-badge { background-color: #ffd600; color: #000; padding: 2px 10px; border-radius: 4px; font-weight: bold; }
@@ -134,6 +144,11 @@ st.markdown(f'''
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🎬 Studio Controls")
+    
+    # CUTOFF ADJUSTMENT
+    st.subheader("⏱️ Timing Tweaks")
+    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.2, 0.1, help="Add extra silence to the end of lines to prevent audio cutoff.")
+    
     speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
@@ -153,12 +168,19 @@ with st.sidebar:
             st.session_state.playing = False
             st.rerun()
 
+    # EDIT CURRENT LINE MOVED TO SIDEBAR
+    st.divider()
+    if st.session_state.script_text and not st.session_state.playing:
+        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True):
+            # We'll trigger the JS scroll via a session state flag or empty slot
+            st.session_state.trigger_scroll = True
+            st.rerun()
+
     st.divider()
     st.subheader("🔍 Find & Replace")
     f_text = st.text_input("Find text...")
     r_text = st.text_input("Replace with...")
     match_whole = st.checkbox("Match whole words only")
-    st.caption("⚠️ Note: Replacements are case-sensitive.")
     
     if st.button("Apply Replace", use_container_width=True):
         if f_text:
@@ -212,7 +234,7 @@ if uploaded_file:
         st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = normalized_text
         st.session_state.current_line_idx = 0
-        st.session_state.editor_version += 1 # Added to refresh the editor on new file
+        st.session_state.editor_version += 1 
         st.rerun()
 
 if st.session_state.script_text:
@@ -251,13 +273,16 @@ if st.session_state.script_text:
         current_line_text = lines[curr_idx]["text"]
         target_raw_line = lines[curr_idx]["raw_line_num"]
         
+        # Sticky Teleprompter UI
         st.markdown(f"""
-            <div class="performance-monitor">
-                <div style="display: flex; justify-content: space-between;">
-                    <small style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</small>
-                    <small style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</small>
+            <div class="sticky-prompter">
+                <div class="performance-monitor">
+                    <div style="display: flex; justify-content: space-between;">
+                        <small style="color:#ffd600;">BLOCK {curr_idx + 1} OF {len(lines)}</small>
+                        <small style="color:#ffd600;">{"● READING" if st.session_state.playing else "○ STANDBY"}</small>
+                    </div>
+                    <span class="active-line">{current_line_text}</span>
                 </div>
-                <span class="active-line">{current_line_text}</span>
             </div>
         """, unsafe_allow_html=True)
         
@@ -281,7 +306,8 @@ if st.session_state.script_text:
             </script>
         """
 
-        if st.button("🖱️ CLICK TO EDIT THIS LINE", use_container_width=True):
+        # Handle Sidebar Edit Trigger
+        if st.session_state.get("trigger_scroll", False):
             st.session_state.playing = False
             st.session_state.edit_history.append({
                 "block": curr_idx + 1, "text": current_line_text, "idx": curr_idx, "time": time.time()
@@ -289,11 +315,13 @@ if st.session_state.script_text:
             if not st.session_state.undo_stack or st.session_state.undo_stack[-1] != st.session_state.script_text:
                 st.session_state.undo_stack.append(st.session_state.script_text)
             components.html(scroll_js, height=0)
+            st.session_state.trigger_scroll = False
 
+    # Expanded Editor Height
     current_editor_val = st.text_area(
         "Script", 
         value=st.session_state.script_text, 
-        height=500, 
+        height=800, 
         key=f"editor_v{st.session_state.editor_version}", 
         label_visibility="collapsed"
     )
@@ -338,9 +366,9 @@ if st.session_state.script_text:
                 audio_tag = f'<audio autoplay="true" id="p_{time.time()}"><source src="data:audio/mp3;base64,{b64}"></audio>'
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
                 w_count = len(read_text.split())
-                # Updated math: 2.2 base instead of 1.8 to prevent truncation
-                wait_time = (max(2.2, (w_count / 140) * 60)) / speed_factor
-                # Slightly reduced delay (0.1) for snappier transitions
+                
+                # Dynamic wait time + User-defined pause buffer
+                wait_time = ((max(2.2, (w_count / 140) * 60)) / speed_factor) + pause_buffer
                 time.sleep(wait_time + 0.1)
             
             st.session_state.current_line_idx += 1
