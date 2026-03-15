@@ -67,14 +67,19 @@ def normalize_script_spacing(text):
     return text.strip()
 
 def guess_gender(name):
-    fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER']
+    fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER', 'QUEEN', 'LADY']
+    masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD']
+    
     name_up = name.upper()
     if any(hint in name_up for hint in fem_hints) or name_up.endswith('A'):
         return "en-US-AriaNeural"
+    if any(hint in name_up for hint in masc_hints):
+        return "en-US-ChristopherNeural" # Give them a deeper, "tough guy" voice
     return "en-US-GuyNeural"
 
 def extract_characters(script_text):
-    potential_names = re.findall(r'^[A-Z][A-Z\s]+$', script_text, re.MULTILINE)
+    # Added \d to allow numbers (like HENCHMAN 1) and \. to allow names like DR. SMITH
+    potential_names = re.findall(r'^[A-Z][A-Z\d\s\.]+$', script_text, re.MULTILINE)
     exclude = ["INT.", "EXT.", "CUT TO:", "FADE IN:", "FADE OUT:", "CONTINUED:", "V.O.", "O.C.", "THE END", "ACT ONE", "SCENE", "TITLE", "CARD", "PAGE", "DAY", "NIGHT"]
     clean_names = [n.strip() for n in potential_names if n.strip() not in exclude and len(n.strip()) > 1]
     return sorted(list(set(clean_names)))
