@@ -75,4 +75,5 @@ If this tool helped you nail your script competition or streamlined your pre-pro
 ---
 **Developed by Ida Akiwumi**
 *Product Architect | Narrative Strategist | Screenwriter Enthusiast*
+
 *Bridging the gap between code and story.*
