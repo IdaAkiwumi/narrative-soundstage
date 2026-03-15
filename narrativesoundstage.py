@@ -73,7 +73,7 @@ def get_docx_download(text):
     return bio.getvalue()
 
 # --- UI SETUP ---
-st.set_page_config(page_title="Narrative Soundstage: Pro", layout="wide")
+st.set_page_config(page_title="Narrative Soundstage", layout="wide")
 
 st.markdown("""
     <style>
@@ -155,7 +155,7 @@ word_count = len(st.session_state.script_text.split()) if st.session_state.scrip
 
 st.markdown(f'''
     <div class="compact-header">
-        <span>🎭 NARRATIVE SOUNDSTAGE: PRO</span>
+        <span>🎭 NARRATIVE SOUNDSTAGE</span>
         <span>WORDS: <span class="stats-badge">{word_count}</span></span>
     </div>
 ''', unsafe_allow_html=True)
