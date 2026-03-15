@@ -248,6 +248,16 @@ st.markdown("""
             display: block;
         }
     }
+    
+    /* Add space at the very bottom of the app */
+.main .block-container {
+    padding-bottom: 10rem !important;
+}
+
+/* Add specific padding after the text area */
+div[data-testid="stTextArea"] {
+    margin-bottom: 150px !important;
+}
    
     </style>
 """, unsafe_allow_html=True)
@@ -452,28 +462,32 @@ if st.session_state.script_text:
         """, unsafe_allow_html=True)
         
         scroll_js = f"""
-            <script>
-            setTimeout(function() {{
-                var textArea = window.parent.document.querySelector('textarea');
-                if (textArea) {{
-                    var text = textArea.value;
-                    var lines = text.split('\\n');
-                    var charPos = 0;
-                    for (var i = 0; i < Math.min({target_raw_line}, lines.length); i++) {{
-                        charPos += lines[i].length + 1;
-                    }}
-                    textArea.focus();
-                    textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
-                    
-                    if ({target_raw_line} > 0) {{
-                        var totalScroll = textArea.scrollHeight;
-                        var relativePos = {target_raw_line} / lines.length;
-                        textArea.scrollTop = (totalScroll * relativePos) - 150;
-                    }}
-                }}
-            }}, 100);
-            </script>
-        """
+    <script>
+    setTimeout(function() {{
+        var textArea = window.parent.document.querySelector('textarea');
+        if (textArea) {{
+            var text = textArea.value;
+            var lines = text.split('\\n');
+            var charPos = 0;
+            for (var i = 0; i < Math.min({target_raw_line}, lines.length); i++) {{
+                charPos += lines[i].length + 1;
+            }}
+            
+            textArea.focus();
+            // This selection range is what actually forces the scroll to follow the "cursor"
+            textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
+            
+            // Refined calculation for "Center in view"
+            var lineHeight = 28.8; // Based on your 18px font-size * 1.6 line-height
+            var offset = ({target_raw_line} * lineHeight) - (textArea.clientHeight / 2);
+            textArea.scrollTo({{
+                top: offset,
+                behavior: 'smooth'
+            }});
+        }}
+    }}, 100);
+    </script>
+"""
 
         if st.session_state.trigger_scroll:
             components.html(scroll_js, height=0)
@@ -496,7 +510,7 @@ if st.session_state.script_text:
         if st.session_state.current_line_idx < len(lines):
             
             # TRIGGER SCROLL ONLY AFTER LINE 50 
-            if st.session_state.current_line_idx > 50:
+            if st.session_state.current_line_idx > 10:
                 components.html(scroll_js, height=0)
             
             idx = st.session_state.current_line_idx
