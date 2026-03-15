@@ -148,7 +148,7 @@ with st.sidebar:
     
     # 1. ADJUST READING CUTOFF
     st.subheader("⏱️ Reading Controls")
-    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.3, 0.1, help="Increase this if the audio cuts off too early.")
+    pause_buffer = st.slider("Line Pause Buffer (Secs)", 0.0, 2.0, 0.6, 0.1, help="Increase this if the audio cuts off too early.")
     speed_factor = st.slider("Playback Speed", 0.5, 2.0, 1.0, 0.1, key="speed")
     rate_str = f"{int((speed_factor - 1) * 100):+d}%"
     
@@ -182,15 +182,13 @@ with st.sidebar:
             st.session_state.editor_version += 1 
             st.rerun()        
 
-    # 2. EDIT CURRENT LINE (MOVED HERE)
-   
+    # 2. EDIT CURRENT LINE
     if st.session_state.script_text:
         if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True, type="secondary"):
             st.session_state.playing = False
             st.session_state.trigger_scroll = True
             st.rerun()
 
-   
     st.subheader("🔍 Find & Replace")
     f_text = st.text_input("Find text...")
     r_text = st.text_input("Replace with...")
@@ -276,6 +274,7 @@ if st.session_state.script_text:
             </div>
         """, unsafe_allow_html=True)
         
+        # --- FIXED SCROLLING LOGIC ---
         scroll_js = f"""
             <script>
             setTimeout(function() {{
@@ -289,8 +288,11 @@ if st.session_state.script_text:
                     }}
                     textArea.focus();
                     textArea.setSelectionRange(charPos, charPos + (lines[{target_raw_line}] ? lines[{target_raw_line}].length : 0));
-                    var scrollPos = ({target_raw_line} / lines.length) * textArea.scrollHeight;
-                    textArea.scrollTop = scrollPos - (textArea.clientHeight / 2);
+                    
+                    // Center the line in the top third of the editor instead of dead center
+                    var totalScroll = textArea.scrollHeight;
+                    var relativePos = {target_raw_line} / lines.length;
+                    textArea.scrollTop = (totalScroll * relativePos) - 150;
                 }}
             }}, 100);
             </script>
@@ -329,7 +331,6 @@ if st.session_state.script_text:
             line_data = lines[idx]
             line_content = line_data["text"]
             
-            # Identify Speaker
             if line_content in cast_list:
                 st.session_state.last_active_role = line_content
                 current_role = "NARRATOR"
@@ -356,7 +357,6 @@ if st.session_state.script_text:
                 audio_engine_slot.markdown(audio_tag, unsafe_allow_html=True)
                 w_count = len(read_text.split())
                 
-                # Math for timing + the manual pause_buffer
                 wait_time = ((max(2.2, (w_count / 140) * 60)) / speed_factor) + pause_buffer
                 time.sleep(wait_time)
             
