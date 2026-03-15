@@ -1,3 +1,27 @@
+"""
+PROJECT: Narrative Soundstage
+VERSION: 1.2.0
+AUTHOR: Ida Akiwumi
+ROLE: Product Architect | Narrative Strategist | Screenwriter
+TECH STACK: Python, Streamlit, Edge-TTS, Asyncio, Regex
+
+DESCRIPTION:
+An intelligent script-to-performance engine designed for screenwriters and producers. 
+This tool automates voice-over table reads, maintains character consistency through 
+dynamic casting, and provides a real-time "active-line" prompter for editing.
+
+IDEAL FOR:
+- Film & Television Pre-production, Script Development, Screenplay Revisions & Table Reads
+- Game Design Narrative Logic
+- Legal Thriller & Action Comedy Script Development
+- Data Storytelling & AI-Assisted Workflows
+"""
+
+__author__ = "Ida Akiwumi"
+__version__ = "1.2.0"
+__license__ = "Proprietary"
+__status__ = "Production / Portfolio"
+
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
@@ -73,7 +97,11 @@ def get_docx_download(text):
     return bio.getvalue()
 
 # --- UI SETUP ---
-st.set_page_config(page_title="Narrative Soundstage", layout="wide")
+st.set_page_config(
+    page_title="Narrative Soundstage | Designed by Ida Akiwumi", 
+    page_icon="🎭",
+    layout="wide"
+)
 
 st.markdown("""
     <style>
@@ -225,6 +253,15 @@ with st.sidebar:
     if st.session_state.script_text:
         docx_data = get_docx_download(st.session_state.script_text)
         st.download_button("💾 Export .docx", docx_data, "Script_Updated.docx", use_container_width=True)
+        
+        # --- CREATOR INFO ---
+    st.markdown("---")
+    st.markdown("""
+        **Developed by Ida Akiwumi**,  *Product Architect & Narrative Strategist* Specializing in AI-assisted workflows for Film, Gaming, and Data Storytelling.
+    """)
+
+
+
 
 # --- MAIN INTERFACE ---
 uploaded_file = st.file_uploader("Upload Script", type=["docx"], key="file_input", label_visibility="collapsed")
