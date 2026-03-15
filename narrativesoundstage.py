@@ -227,7 +227,7 @@ with st.sidebar:
             st.rerun()        
 
     if st.session_state.script_text:
-        if st.button("🖱️ CLICK TO EDIT CURRENT LINE", use_container_width=True):
+        if st.button("🖱️ EDIT CURRENT LINE", use_container_width=True):
             st.session_state.playing = False
             st.session_state.trigger_scroll = True
             st.rerun()
