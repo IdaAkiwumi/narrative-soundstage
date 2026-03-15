@@ -160,6 +160,7 @@ with st.sidebar:
     st.subheader("🔍 Find & Replace")
     f_text = st.text_input("Find text...")
     r_text = st.text_input("Replace with...")
+    match_whole = st.checkbox("Match whole words only")
     st.caption("⚠️ Note: Replacements are case-sensitive.")
     
     if st.button("Apply Replace", use_container_width=True):
