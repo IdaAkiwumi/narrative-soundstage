@@ -70,37 +70,46 @@ def normalize_script_spacing(text):
 
 def guess_gender(name):
     """
-    Intelligently assigns voices based on gender hints and cultural linguistic patterns.
+    Intelligently assigns voices based on gender hints, common names, and cultural patterns.
     """
     males = [v for k, v in FREE_VOICES.items() if "(Male" in k]
     females = [v for k, v in FREE_VOICES.items() if "(Female" in k]
     
     name_up = name.upper()
 
-    # --- Cultural/Regional Detection ---
-    # Russian/Slavic
+    # --- 1. Specific Female Name Match ---
+    # Add any common names here that don't end in 'A'
+    fem_names = [
+        'SARAH', 'SARAI', 'CHLOE', 'EMILY', 'RACHEL', 'MEGAN', 'AMY', 
+        'LAUREN', 'MICHELLE', 'CLAIRE', 'ALICE', 'BETH', 'IVY', 'NAOMI'
+    ]
+    if name_up in fem_names:
+        return random.choice(females)
+
+    # --- 2. Cultural/Regional Detection ---
     if any(suffix in name_up for suffix in ['VIK','OV', 'SLAV', 'IM']):
         return "ru-RU-DmitryNeural"
     if any(suffix in name_up for suffix in ['OVA', 'INA', 'YANA']):
         return "ru-RU-SvetlanaNeural"
     
-    # French
     if any(suffix in name_up for suffix in ['JEAN', 'LUC', 'PIERRE', 'ZAMORA']):
         return "fr-FR-HenriNeural"
     
-    # German
     if any(suffix in name_up for suffix in ['HELM', 'RICHT', 'BURG']):
         return "de-DE-ConradNeural"
 
-    # --- Standard Gender Detection ---
+    # --- 3. Standard Gender Detection (Hints & Suffixes) ---
     fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER', 'QUEEN', 'LADY', 'STYLIST','MIRA']
-    masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD', 'SUIT', 'DRIVER']
+    masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD', 'SUIT', 'DRIVER', 'FIREFIGHTER']
     
+    # Check hints or names ending in 'A' (common for feminine names across many languages)
     if any(hint in name_up for hint in fem_hints) or name_up.endswith('A'):
         return random.choice(females)
+        
     if any(hint in name_up for hint in masc_hints):
         return random.choice(males)
     
+    # Fallback to random
     return random.choice(males + females)
 
 def extract_characters(script_text):
