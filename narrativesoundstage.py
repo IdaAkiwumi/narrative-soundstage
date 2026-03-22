@@ -1,6 +1,6 @@
 """
 PROJECT: Narrative Soundstage
-VERSION: 1.2.0
+VERSION: 1.0.0
 AUTHOR: Ida Akiwumi
 ROLE: Product Architect | Narrative Strategist | Screenwriter
 TECH STACK: Python, Streamlit, Edge-TTS, Asyncio, Regex
@@ -18,7 +18,7 @@ IDEAL FOR:
 """
 
 __author__ = "Ida Akiwumi"
-__version__ = "1.2.0"
+__version__ = "1.0.0"
 __license__ = "Proprietary"
 __status__ = "Production / Portfolio"
 
@@ -35,9 +35,34 @@ import time
 import streamlit.components.v1 as components
 import random
 
+
+PLACEHOLDER_SCRIPT = f"""TITLE: NARRATIVE SOUNDSTAGE
+AUTHOR: {__author__}
+VERSION: {__version__}
+
+INT. STUDIO - DAY
+
+The screen is dark. A yellow glow emanates from the corner.
+
+IDA (V.O.)
+Welcome to the Soundstage. This tool is an intelligent script-to-performance engine.
+
+NARRATOR
+Designed for screenwriters and producers, it automates table reads and maintains character consistency.
+
+PRODUCER
+It handles everything from legal thrillers to action comedies.
+
+IDA
+To begin, simply upload your .docx script using the button above.
+"""
+
+
 # --- 1. INITIALIZE STATE ---
 def init_state():
-    if "script_text" not in st.session_state: st.session_state.script_text = ""
+    if "script_text" not in st.session_state: 
+        # Set the placeholder as the initial state
+        st.session_state.script_text = PLACEHOLDER_SCRIPT
     if "undo_stack" not in st.session_state: st.session_state.undo_stack = []
     if "redo_stack" not in st.session_state: st.session_state.redo_stack = []
     if "edit_history" not in st.session_state: st.session_state.edit_history = []
@@ -445,6 +470,8 @@ if uploaded_file:
     doc = Document(uploaded_file)
     raw_text = "\n".join([p.text for p in doc.paragraphs])
     normalized_text = normalize_script_spacing(raw_text)
+    
+    # This check ensures that once a user uploads, the placeholder vanishes
     if normalized_text != st.session_state.script_text:
         st.session_state.undo_stack.append(st.session_state.script_text)
         st.session_state.script_text = normalized_text
