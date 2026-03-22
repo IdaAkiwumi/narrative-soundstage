@@ -294,6 +294,9 @@ div[data-testid="stTextArea"] {
         border: 2px solid #ffd600 !important;
     }
    
+   
+   
+   
     </style>
 """, unsafe_allow_html=True)
 
