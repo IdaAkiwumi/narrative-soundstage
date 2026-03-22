@@ -166,6 +166,7 @@ st.set_page_config(
     page_icon="🎭",
     layout="wide"
 )
+
 # CUSTOM CSS FOR STYLING
 st.markdown("""
     <style>
@@ -266,9 +267,37 @@ st.markdown("""
 div[data-testid="stTextArea"] {
     margin-bottom: 150px !important;
 }
+
+
+/* 1. RESTORE BRAND COLOR TO THE PLAY BUTTON */
+    /* Target the 'Primary' button specifically */
+    div.stButton > button[kind="primary"] {
+        background-color: #ffd600 !important;
+        color: #000000 !important; /* Black text on yellow button */
+        border: none !important;
+        font-weight: bold !important;
+    }
+    
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #ccac00 !important; /* Darker gold on hover */
+        color: #000000 !important;
+    }
+
+    /* 2. RESTORE BRAND COLOR TO THE SLIDER TRACK */
+    /* This keeps the numbers readable (from the .toml) but makes the bar yellow */
+    div[data-testid="stSlider"] div[data-baseweb="slider"] > div:first-child > div:nth-child(2) {
+        background-color: #ffd600 !important;
+    }
+/* 3. ENSURE THE SLIDER THUMB IS VISIBLE */
+    div[role="slider"] {
+        background-color: #ffffff !important;
+        border: 2px solid #ffd600 !important;
+    }
    
     </style>
 """, unsafe_allow_html=True)
+
+
 
 FREE_VOICES = {
     # --- MALE ---
