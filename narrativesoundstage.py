@@ -70,37 +70,37 @@ def normalize_script_spacing(text):
 
 def guess_gender(name):
     """
-    Randomly assigns a voice from the appropriate category to maintain variety.
+    Intelligently assigns voices based on gender hints and cultural linguistic patterns.
     """
-    # Define pools from your FREE_VOICES dictionary
-    males = [
-        "en-US-GuyNeural", "en-US-ChristopherNeural", "en-GB-RyanNeural", 
-        "en-GB-ThomasNeural", "en-AU-WilliamNeural", "en-NG-AbeoNeural", 
-        "ar-AE-HamdanNeural", "ur-PK-AsadNeural", "en-CA-LiamNeural", 
-        "en-US-AndrewNeural", "en-US-BrianNeural", "en-ZA-LukeNeural", 
-        "en-KE-ChilembaNeural", "zu-ZA-ThembaNeural"
-    ]
-    
-    females = [
-        "en-US-AriaNeural", "en-US-JennyNeural", "en-GB-SoniaNeural", 
-        "en-GB-LibbyNeural", "en-GB-MaisieNeural", "en-NG-EzinneNeural", 
-        "en-AU-NatashaNeural", "ar-AE-FatimaNeural", "zh-HK-HiuGaaiNeural", 
-        "es-US-PalomaNeural", "en-US-AvaNeural", "en-US-EmmaNeural", 
-        "en-KE-AsiliaNeural", "en-TZ-ImaniNeural", "en-ZA-LeahNeural"
-    ]
-
-    fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER', 'QUEEN', 'LADY']
-    masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD']
+    males = [v for k, v in FREE_VOICES.items() if "(Male" in k]
+    females = [v for k, v in FREE_VOICES.items() if "(Female" in k]
     
     name_up = name.upper()
+
+    # --- Cultural/Regional Detection ---
+    # Russian/Slavic
+    if any(suffix in name_up for suffix in ['VIK','OV', 'SLAV', 'IM']):
+        return "ru-RU-DmitryNeural"
+    if any(suffix in name_up for suffix in ['OVA', 'INA', 'YANA']):
+        return "ru-RU-SvetlanaNeural"
     
-    # Logic for selection
+    # French
+    if any(suffix in name_up for suffix in ['JEAN', 'LUC', 'PIERRE', 'ZAMORA']):
+        return "fr-FR-HenriNeural"
+    
+    # German
+    if any(suffix in name_up for suffix in ['HELM', 'RICHT', 'BURG']):
+        return "de-DE-ConradNeural"
+
+    # --- Standard Gender Detection ---
+    fem_hints = ['ARIA', 'JENNY', 'SONIA', 'MARIAN', 'GIRL', 'WOMAN', 'SISTER', 'MOTHER', 'QUEEN', 'LADY', 'STYLIST','MIRA']
+    masc_hints = ['GUY', 'MAN', 'BOY', 'BROTHER', 'FATHER', 'KING', 'LORD', 'HENCHMAN', 'OFFICER', 'GUARD', 'SUIT', 'DRIVER']
+    
     if any(hint in name_up for hint in fem_hints) or name_up.endswith('A'):
         return random.choice(females)
     if any(hint in name_up for hint in masc_hints):
         return random.choice(males)
     
-    # If no hint, pick from the entire pool for maximum randomness
     return random.choice(males + females)
 
 def extract_characters(script_text):
@@ -271,7 +271,7 @@ FREE_VOICES = {
     "Abeo (Male - African/NG)": "en-NG-AbeoNeural",
     "Hamdan (Male - Arabic/UAE)": "ar-AE-HamdanNeural",
     "Asad (Male - Asian/PK)": "ur-PK-AsadNeural",
-    "Liam (Male - Canadian)": "en-CA-LiamNeural", # Ensure en-CA prefix
+    "Liam (Male - Canadian)": "en-CA-LiamNeural",
     "Andrew (Male - Energetic/Afro-Latino)": "en-US-AndrewNeural",
     "Brian (Male - Casual US/Afro-Latino)": "en-US-BrianNeural",
     "Luke (Male - Caribbean/SA Hint)": "en-ZA-LukeNeural",
@@ -279,6 +279,11 @@ FREE_VOICES = {
     "Themba (Male - Zulu/Southern African)": "zu-ZA-ThembaNeural",
     "Gonzalo (Male - Latino-Strong)": "es-CO-GonzaloNeural",
     "Emilio (Male - Latino)": "es-DO-EmilioNeural",
+    "Dmitry (Male - Russian)": "ru-RU-DmitryNeural",
+    "Henri (Male - French)": "fr-FR-HenriNeural",
+    "Conrad (Male - German)": "de-DE-ConradNeural",
+    "Connor (Male - Irish)": "en-IE-ConnorNeural",
+
     # --- FEMALE ---
     "Aria (Female - US Pro)": "en-US-AriaNeural",
     "Jenny (Female - US Friendly)": "en-US-JennyNeural",
@@ -292,11 +297,14 @@ FREE_VOICES = {
     "Clara (Female - US Latino Hint)": "es-US-PalomaNeural",
     "Ava (Female - US Gen-Z/AA Hint)": "en-US-AvaNeural",
     "Emma (Female - Casual US)": "en-US-EmmaNeural",
-    "Asilia (Female - African/KE)": "en-KE-AsiliaNeural", # Ensure en-KE prefix
+    "Asilia (Female - African/KE)": "en-KE-AsiliaNeural",
     "Imani (Female - East African)": "en-TZ-ImaniNeural",
     "Leah (Female - Southern African)": "en-ZA-LeahNeural",
     "Ramona (Female - Latina)": "es-DO-RamonaNeural",
     "Belkys (Female - Afro Latina/Latina)": "es-CU-BelkysNeural",
+    "Svetlana (Female - Russian)": "ru-RU-SvetlanaNeural",
+    "Denise (Female - French)": "fr-FR-DeniseNeural",
+    "Katja (Female - German)": "de-DE-KatjaNeural",
 }
 
 VOICE_LABELS = {v: k for k, v in FREE_VOICES.items()}
