@@ -454,10 +454,15 @@ with st.sidebar:
         docx_data = get_docx_download(st.session_state.script_text)
         st.download_button("💾 Export .docx", docx_data, "Script_Updated.docx", use_container_width=True)
         
-        # --- CREATOR INFO ---
+        # --- CREATOR INFO & LINKEDIN ---
     st.markdown("---")
-    st.markdown("""
-        **Developed by Ida Akiwumi**,  *Product Architect & Narrative Strategist* Specializing in AI-assisted workflows for Film, Gaming, and Data Storytelling.
+    
+    # Matching the requested format: Platform -> [Name](URL)
+    st.markdown("Follow me on:")
+    st.markdown(f"LinkedIn $\\rightarrow$ [Ida Akiwumi](https://www.linkedin.com/in/idaa11)")
+    
+    st.markdown(f"""
+        **Developed by {__author__}**,  *Product Architect & Narrative Strategist* Specializing in AI-assisted workflows for Film, Gaming, and Data Storytelling.
     """)
 
 
