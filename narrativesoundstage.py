@@ -361,6 +361,8 @@ st.markdown(f'''
 st.markdown('<div class="mobile-hint">⬅️ OPEN SIDEBAR FOR STUDIO CONTROLS</div>', unsafe_allow_html=True)
 
 
+
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("🎬 Studio Controls")
