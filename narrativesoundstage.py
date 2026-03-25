@@ -41,9 +41,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# Small delay so the selected/highlighted line has time to visibly appear
-# in the textarea before audio continues / rerun happens.
-HIGHLIGHT_SETTLE_TIME = 0.35
+# Helps the selected/highlighted line stay visible in the textarea
+HIGHLIGHT_SETTLE_TIME = 0.55
+MIN_LINE_DISPLAY_TIME = 0.85
 
 # Faster transition timing for non-dialogue speech cues
 CAST_NAME_WAIT = 0.45
@@ -179,12 +179,10 @@ def guess_gender(name):
     males = [v for k, v in FREE_VOICES.items() if "(Male" in k]
     females = [v for k, v in FREE_VOICES.items() if "(Female" in k]
 
-    # Normalize name for matching
     name_up = name.upper().strip()
     name_clean = re.sub(r'[^A-Z\s-]', '', name_up).strip()
     first_token = name_clean.split()[0] if name_clean.split() else name_clean
 
-    # --- 1. Specific Female Name Match ---
     fem_names = {
         "SARAH", "SARAI", "CHLOE", "EMILY", "RACHEL", "MEGAN", "AMY",
         "LAUREN", "MICHELLE", "CLAIRE", "ALICE", "BETH", "IVY", "NAOMI",
@@ -197,7 +195,6 @@ def guess_gender(name):
         "OMARIA", "SAMAYA", "SANIYA", "TANIYA", "TRINITY", "ZANIYAH"
     }
 
-    # --- 2. Specific Male Name Match ---
     male_names = {
         "MALIK", "JAMAL", "JAMAAL", "KAREEM", "KARIM", "AMARI", "OMAR",
         "DARIUS", "MARCUS", "MALCOLM", "ISAIAH", "ELIJAH", "JALEN", "JAYLEN",
@@ -217,7 +214,6 @@ def guess_gender(name):
     if first_token in male_names or name_clean in male_names:
         return random.choice(males)
 
-    # --- 3. Cultural/Regional Detection ---
     if any(suffix in name_clean for suffix in ["VIK", "OV", "SLAV", "IM"]):
         return "ru-RU-DmitryNeural"
     if any(suffix in name_clean for suffix in ["OVA", "INA", "YANA"]):
@@ -229,7 +225,6 @@ def guess_gender(name):
     if any(suffix in name_clean for suffix in ["HELM", "RICHT", "BURG"]):
         return "de-DE-ConradNeural"
 
-    # --- 4. Standard Gender Detection (Hints & Suffixes) ---
     fem_hints = [
         "ARIA", "JENNY", "SONIA", "MARIAN", "GIRL", "WOMAN", "SISTER",
         "MOTHER", "QUEEN", "LADY", "STYLIST", "MIRA", "MS", "MISS"
@@ -246,7 +241,6 @@ def guess_gender(name):
     if any(hint in name_clean for hint in masc_hints):
         return random.choice(males)
 
-    # --- 5. Fallback ---
     return random.choice(males + females)
 
 
@@ -318,8 +312,8 @@ def build_scroll_js(target_raw_line):
 
             var lineHeight = 40;
 
-            // Put the active line lower than the top edge so it's easier to see
-            var internalOffset = ({target_raw_line} * lineHeight) - (textArea.clientHeight * 0.25);
+            // Keep the highlighted line well below the top edge
+            var internalOffset = ({target_raw_line} * lineHeight) - (textArea.clientHeight * 0.42);
 
             textArea.scrollTo({{
                 top: Math.max(0, internalOffset),
@@ -735,6 +729,7 @@ if st.session_state.script_text:
                 else:
                     wait_time = base_wait + (pause_buffer * 0.7)
 
+                wait_time = max(wait_time, MIN_LINE_DISPLAY_TIME)
                 time.sleep(wait_time)
 
             st.session_state.current_line_idx += 1
