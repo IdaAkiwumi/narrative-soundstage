@@ -42,8 +42,8 @@ st.set_page_config(
 )
 
 # Helps the selected/highlighted line stay visible in the textarea
-HIGHLIGHT_SETTLE_TIME = 0.55
-MIN_LINE_DISPLAY_TIME = 0.85
+HIGHLIGHT_SETTLE_TIME = 0.85
+MIN_LINE_DISPLAY_TIME = 1.5
 
 # Faster transition timing for non-dialogue speech cues
 CAST_NAME_WAIT = 0.45
