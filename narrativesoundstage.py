@@ -49,6 +49,10 @@ HIGHLIGHT_SETTLE_TIME = 0.35
 CAST_NAME_WAIT = 0.45
 PARENTHETICAL_WAIT = 0.60
 
+# Add top padding to uploaded scripts only so the first highlighted lines
+# are less likely to hide at the top of the white script viewer.
+UPLOAD_TOP_PADDING_LINES = 10
+
 PLACEHOLDER_SCRIPT = f"""TITLE: NARRATIVE SOUNDSTAGE
 AUTHOR: {__author__}
 VERSION: {__version__}
@@ -162,9 +166,9 @@ async def generate_voice_bytes(text, voice_id, rate="+0%"):
         return None
 
 
-def normalize_script_spacing(text):
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+def normalize_script_spacing(text, leading_blank_lines=0):
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return ("\n" * leading_blank_lines) + text
 
 
 def guess_gender(name):
@@ -570,7 +574,10 @@ uploaded_file = st.file_uploader("Upload Script", type=["docx"], key="file_input
 if uploaded_file:
     doc = Document(uploaded_file)
     raw_text = "\n".join([p.text for p in doc.paragraphs])
-    normalized_text = normalize_script_spacing(raw_text)
+    normalized_text = normalize_script_spacing(
+        raw_text,
+        leading_blank_lines=UPLOAD_TOP_PADDING_LINES
+    )
 
     if normalized_text != st.session_state.script_text:
         st.session_state.undo_stack.append(st.session_state.script_text)
