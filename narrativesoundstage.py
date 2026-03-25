@@ -1,6 +1,6 @@
 """
 PROJECT: Narrative Soundstage
-VERSION: 1.0.0
+VERSION: 1.0.2
 AUTHOR: Ida Akiwumi
 ROLE: Product Architect | Narrative Strategist | Screenwriter
 TECH STACK: Python, Streamlit, Edge-TTS, Asyncio, Regex
@@ -18,7 +18,7 @@ IDEAL FOR:
 """
 
 __author__ = "Ida Akiwumi"
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 __license__ = "Proprietary"
 __status__ = "Production / Portfolio"
 
@@ -147,6 +147,12 @@ def init_state():
         st.session_state.trigger_scroll = False
     if "has_user_started_playback" not in st.session_state:
         st.session_state.has_user_started_playback = False
+    # Track if user has uploaded a file
+    if "uploaded_filename" not in st.session_state:
+        st.session_state.uploaded_filename = None
+    # NEW: Track if we should show the upload toast
+    if "show_upload_toast" not in st.session_state:
+        st.session_state.show_upload_toast = False
 
 
 init_state()
@@ -529,23 +535,29 @@ with st.sidebar:
             st.session_state.trigger_scroll = True
             st.rerun()
 
-    st.subheader("🔍 Find & Replace")
-    f_text = st.text_input("Find text...")
-    r_text = st.text_input("Replace with...")
+    # MEDIUM FIX: Move Find & Replace to expander
+    with st.expander("🔍 Find & Replace"):
+        f_text = st.text_input("Find text...")
+        r_text = st.text_input("Replace with...")
 
-    if st.button("Apply Replace", use_container_width=True):
-        if f_text:
-            st.session_state.undo_stack.append(st.session_state.script_text)
-            st.session_state.script_text = st.session_state.script_text.replace(f_text, r_text)
-            st.session_state.editor_version += 1
-            st.session_state.playing = False
-            st.rerun()
+        if st.button("Apply Replace", use_container_width=True):
+            # MEDIUM FIX: Show warning if empty input
+            if not f_text:
+                st.warning("⚠️ Enter text to find.")
+            else:
+                st.session_state.undo_stack.append(st.session_state.script_text)
+                st.session_state.script_text = st.session_state.script_text.replace(f_text, r_text)
+                st.session_state.editor_version += 1
+                st.session_state.playing = False
+                st.rerun()
 
-        st.subheader("📍 Navigation")
+    st.subheader("📍 Navigation")
+    # MEDIUM FIX: Add help tooltip explaining what a "block" is
     jump_line = st.number_input(
         "Jump to Block #",
         min_value=1,
-        value=st.session_state.current_line_idx + 1
+        value=st.session_state.current_line_idx + 1,
+        help="A block is a single line of dialogue, action, or scene heading."
     )
 
     nav_col1, nav_col2 = st.columns(2)
@@ -578,28 +590,53 @@ with st.sidebar:
 
 
 # --- MAIN INTERFACE ---
+
+# Show toast notification for successful upload (auto-dismisses)
+if st.session_state.show_upload_toast:
+    st.toast(f"✅ Loaded: {st.session_state.uploaded_filename}", icon="🎬")
+    st.session_state.show_upload_toast = False
+
+# HIGH FIX: Onboarding message for first-time visitors
+if st.session_state.script_text == PLACEHOLDER_SCRIPT:
+    st.info("🎭 **Welcome to Narrative Soundstage** — Upload a .docx screenplay, assign voices to characters, and run an automated table read with AI narration. Press PLAY to hear the demo script.")
+
 uploaded_file = st.file_uploader("Upload Script", type=["docx"], key="file_input", label_visibility="collapsed")
 
 if uploaded_file:
-    doc = Document(uploaded_file)
-    raw_text = "\n".join([p.text for p in doc.paragraphs])
-    normalized_text = normalize_script_spacing(
-        raw_text,
-        leading_blank_lines=UPLOAD_TOP_PADDING_LINES
-    )
+    # HIGH FIX: Error handling for file upload
+    try:
+        doc = Document(uploaded_file)
+        raw_text = "\n".join([p.text for p in doc.paragraphs])
+        
+        # Check if document is empty
+        if not raw_text.strip():
+            st.error("⚠️ The uploaded file appears to be empty. Please upload a valid .docx screenplay.")
+        else:
+            normalized_text = normalize_script_spacing(
+                raw_text,
+                leading_blank_lines=UPLOAD_TOP_PADDING_LINES
+            )
 
-    if normalized_text != st.session_state.script_text:
-        st.session_state.undo_stack.append(st.session_state.script_text)
-        st.session_state.script_text = normalized_text
-        st.session_state.current_line_idx = 0
-        st.session_state.editor_version += 1
-        st.session_state.playing = False
-        st.rerun()
+            if normalized_text != st.session_state.script_text:
+                st.session_state.undo_stack.append(st.session_state.script_text)
+                st.session_state.script_text = normalized_text
+                st.session_state.current_line_idx = 0
+                st.session_state.editor_version += 1
+                st.session_state.playing = False
+                st.session_state.uploaded_filename = uploaded_file.name
+                # Set flag to show toast on next rerun
+                st.session_state.show_upload_toast = True
+                st.rerun()
+    except Exception as e:
+        st.error("⚠️ Could not read this file. Please upload a valid .docx screenplay.")
 
 if st.session_state.script_text:
     cast_list = extract_characters(st.session_state.script_text)
 
     with st.expander("👤 Casting Office"):
+        # MEDIUM FIX: Add caption explaining auto-assignment
+        st.caption("🎭 Voices were auto-assigned based on character names. Adjust below as needed.")
+        
         c1, c2 = st.columns(2)
 
         current_n_id = st.session_state.voice_map.get("NARRATOR", "en-GB-RyanNeural")
@@ -654,6 +691,10 @@ if st.session_state.script_text:
         current_line_text = lines[curr_idx]["text"]
         target_raw_line = lines[curr_idx]["raw_line_num"]
 
+        # MEDIUM FIX: Add progress bar during playback
+        if st.session_state.playing:
+            st.progress(curr_idx / max(len(lines) - 1, 1))
+
         st.markdown(f"""
             <div class="sticky-prompter">
                 <div class="performance-monitor">
@@ -676,6 +717,7 @@ if st.session_state.script_text:
         elif st.session_state.trigger_scroll:
             st.session_state.trigger_scroll = False
 
+    # REVERTED: Textarea remains editable during playback (no disabled parameter)
     current_editor_val = st.text_area(
         "Script",
         value=st.session_state.script_text,
