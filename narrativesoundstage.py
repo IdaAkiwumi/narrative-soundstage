@@ -541,12 +541,27 @@ with st.sidebar:
             st.session_state.playing = False
             st.rerun()
 
-    st.subheader("📍 Navigation")
-    jump_line = st.number_input("Jump to Block #", min_value=1, value=st.session_state.current_line_idx + 1)
-    if st.button("🚀 Jump", use_container_width=True):
-        st.session_state.current_line_idx = int(jump_line) - 1
-        st.session_state.playing = False
-        st.rerun()
+        st.subheader("📍 Navigation")
+    jump_line = st.number_input(
+        "Jump to Block #",
+        min_value=1,
+        value=st.session_state.current_line_idx + 1
+    )
+
+    nav_col1, nav_col2 = st.columns(2)
+
+    with nav_col1:
+        if st.button("🚀 Jump", use_container_width=True):
+            st.session_state.current_line_idx = int(jump_line) - 1
+            st.session_state.playing = False
+            st.rerun()
+
+    with nav_col2:
+        if st.button("▶️ Play Here", use_container_width=True):
+            st.session_state.current_line_idx = int(jump_line) - 1
+            st.session_state.playing = True
+            st.session_state.has_user_started_playback = True
+            st.rerun()
 
     audio_engine_slot = st.empty()
 
