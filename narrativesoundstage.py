@@ -2,7 +2,7 @@
 PROJECT: Narrative Soundstage
 VERSION: 1.0.2
 AUTHOR: Ida Akiwumi
-ROLE: Product Architect | Narrative Strategist | Screenwriter
+ROLE: Creative Technologist | Narrative Strategist | Screenwriter
 TECH STACK: Python, Streamlit, Edge-TTS, Asyncio, Regex
 
 DESCRIPTION:
@@ -585,7 +585,7 @@ with st.sidebar:
     st.markdown("Follow me on:")
     st.markdown(f"LinkedIn $\\rightarrow$ [Ida Akiwumi](https://www.linkedin.com/in/idaa11)")
     st.markdown(f"""
-        **Developed by {__author__}**, *Product Architect & Narrative Strategist* Specializing in AI-assisted workflows for Film, Gaming, and Data Storytelling.
+        **Developed by {__author__}**, *Creative Technologist & Narrative Strategist* Specializing in AI-assisted workflows for Film, Gaming, and Data Storytelling.
     """)
 
 
