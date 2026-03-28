@@ -18,7 +18,7 @@ Most screenplays die in the "silent read." Writers often miss pacing issues, rep
 
 * **Dynamic Casting Office:** Automatically detects characters in your `.docx` script and assigns distinct, high-fidelity AI voices.
 * **Active-Line Prompter:** A real-time, high-contrast performance monitor that scrolls with the audio—perfect for spotting "ear-sores" during table reads.
-* **The "Unicorn" Architecture:** Built by a **Product Architect & Narrative Strategist**, the app combines deep narrative logic with asynchronous Python performance.
+* **The "Unicorn" Architecture:** Built by a **Creative Technologist & Narrative Strategist**, the app combines deep narrative logic with asynchronous Python performance.
 * **Studio Controls:** Fine-tune playback speed and line buffers to match the specific "vibe" of your scene, from fast-paced action comedies to slow-burn legal thrillers.
 
 ---
@@ -74,6 +74,6 @@ If this tool helped you nail your script competition or streamlined your pre-pro
 
 ---
 **Developed by Ida Akiwumi**
-*Product Architect | Narrative Strategist | Screenwriter Enthusiast*
+*Creative Technologist | Narrative Strategist | Screenwriter Enthusiast*
 
 *Bridging the gap between code and story.*
