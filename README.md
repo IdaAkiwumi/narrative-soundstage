@@ -77,3 +77,13 @@ If this tool helped you nail your script competition or streamlined your pre-pro
 *Creative Technologist | Narrative Strategist | Screenwriter Enthusiast*
 
 *Bridging the gap between code and story.*
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=IdaAkiwumi%2Fnarrative-soundstage&type=timeline&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=IdaAkiwumi/narrative-soundstage&type=timeline&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=IdaAkiwumi/narrative-soundstage&type=timeline&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=IdaAkiwumi/narrative-soundstage&type=timeline&legend=top-left" />
+ </picture>
+</a>
